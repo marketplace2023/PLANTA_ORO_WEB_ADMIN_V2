@@ -7,7 +7,7 @@ export type EcosystemDashboard = {
   generatedAt: string
   plants: { total: number; byStatus: Record<string, number>; byVisibility: Record<string, number> }
   users: { total: number; byStatus: Record<string, number>; globalAdmins: number; activeLast30Days: number }
-  access: { roles: number; permissions: number; assignments: number }
+  access: { roles: number; permissions: number; assignments: number; pendingRequests: number }
   catalog: { families: number; types: number; manufacturers: number; models: number }
   masters: { stages: number; networks: number }
   organizations: { providers: { total: number; pending: number }; contractors: { total: number; pending: number } }

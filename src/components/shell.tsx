@@ -1,4 +1,4 @@
-import { Activity, BookOpen, Cog, Factory, LayoutDashboard, LogOut, Menu, RefreshCw, ShieldCheck, X, type LucideIcon } from 'lucide-react'
+import { Activity, BookOpen, Building2, Cog, Factory, LayoutDashboard, LogOut, Menu, RefreshCw, ShieldCheck, UserCheck, X, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useIsFetching, useQueryClient } from '@tanstack/react-query'
@@ -15,7 +15,12 @@ const SECTIONS: Array<{ title: string; items: Item[] }> = [
     items: [
       { to: '/', label: 'Resumen', icon: LayoutDashboard, end: true },
       { to: '/plants', label: 'Plantas', icon: Factory },
+      { to: '/access-requests', label: 'Solicitudes de acceso', icon: UserCheck },
     ],
+  },
+  {
+    title: 'Organizaciones',
+    items: [{ to: '/organizations', label: 'Proveedores y contratistas', icon: Building2 }],
   },
   {
     title: 'Catálogos maestros',

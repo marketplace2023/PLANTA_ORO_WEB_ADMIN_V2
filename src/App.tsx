@@ -4,11 +4,13 @@ import { Loading, Panel } from '@/components/kit'
 import { Shell } from '@/components/shell'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/auth-context'
+import { AccessRequestsPage } from '@/pages/access-requests-page'
 import { ActivityPage } from '@/pages/activity-page'
 import { CatalogPage } from '@/pages/catalog-page'
 import { DashboardPage } from '@/pages/dashboard-page'
 import { LoginPage } from '@/pages/login-page'
 import { MastersPage } from '@/pages/masters-page'
+import { OrganizationsPage } from '@/pages/organizations-page'
 import { PlantDetailPage } from '@/pages/plant-detail-page'
 import { PlantsPage } from '@/pages/plants-page'
 
@@ -53,6 +55,8 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="plants" element={<PlantsPage />} />
         <Route path="plants/:slug" element={<PlantDetailPage />} />
+        <Route path="access-requests" element={<AccessRequestsPage />} />
+        <Route path="organizations" element={<OrganizationsPage />} />
         <Route path="catalog" element={<CatalogPage />} />
         <Route path="masters" element={<MastersPage />} />
         <Route path="activity" element={<ActivityPage />} />

@@ -64,6 +64,27 @@ export function DashboardPage() {
             </Panel>
           </div>
 
+          {d && d.access.pendingRequests > 0 && (
+            <Panel className="mt-6" title="Requiere tu atención">
+              <Link to="/access-requests" className="flex flex-wrap items-center gap-2 text-sm text-fur-gray-900 hover:underline">
+                <AlertOctagon className="size-4 text-fur-orange-500" aria-hidden />
+                <span>{d.access.pendingRequests} solicitud{d.access.pendingRequests === 1 ? '' : 'es'} de acceso a plantas pendiente{d.access.pendingRequests === 1 ? '' : 's'}</span>
+                <span className="ml-auto inline-flex items-center gap-1 font-semibold text-fur-navy-900">Revisar <ArrowRight className="size-3.5" /></span>
+              </Link>
+            </Panel>
+          )}
+
+          {d && d.organizations.providers.pending + d.organizations.contractors.pending > 0 && (
+            <Panel className="mt-6" title="Requiere tu atención">
+              <Link to="/organizations" className="flex flex-wrap items-center gap-2 text-sm text-fur-gray-900 hover:underline">
+                <AlertOctagon className="size-4 text-fur-orange-500" aria-hidden />
+                {d.organizations.providers.pending > 0 && <span>{d.organizations.providers.pending} proveedor{d.organizations.providers.pending === 1 ? '' : 'es'} pendiente{d.organizations.providers.pending === 1 ? '' : 's'} de aprobación</span>}
+                {d.organizations.contractors.pending > 0 && <span>{d.organizations.contractors.pending} contratista{d.organizations.contractors.pending === 1 ? '' : 's'} pendiente{d.organizations.contractors.pending === 1 ? '' : 's'} de aprobación</span>}
+                <span className="ml-auto inline-flex items-center gap-1 font-semibold text-fur-navy-900">Revisar <ArrowRight className="size-3.5" /></span>
+              </Link>
+            </Panel>
+          )}
+
           {dbDown && (
             <Panel className="mt-6" title="Requiere tu atención">
               <p className="flex items-center gap-2 text-sm text-fur-red-500"><AlertOctagon className="size-4" aria-hidden /> La base de datos no responde. Las plantas no podrán operar hasta que se restablezca.</p>

@@ -9,12 +9,15 @@ import { selectClass } from '@/lib/forms'
 export type Field = {
   name: string
   label: string
-  type?: 'text' | 'textarea' | 'select' | 'checkbox' | 'email' | 'url'
+  type?: 'text' | 'textarea' | 'select' | 'checkbox' | 'email' | 'url' | 'number'
   required?: boolean
   options?: Array<{ value: string; label: string }>
   placeholder?: string
   hint?: string
   disabled?: boolean
+  /** Solo `number`. */
+  min?: number
+  step?: string
   /** Ocupa las dos columnas del formulario. */
   wide?: boolean
 }
@@ -95,7 +98,7 @@ export function FormDialog({
                           ))}
                         </select>
                       ) : (
-                        <Input id={id} type={f.type ?? 'text'} value={String(values[f.name])} disabled={f.disabled} placeholder={f.placeholder} onChange={(e) => set(f.name, e.target.value)} />
+                        <Input id={id} type={f.type ?? 'text'} min={f.min} step={f.step} value={String(values[f.name])} disabled={f.disabled} placeholder={f.placeholder} onChange={(e) => set(f.name, e.target.value)} />
                       )}
                     </>
                   )}

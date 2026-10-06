@@ -10,11 +10,16 @@ Solo entra quien tiene `isGlobalAdmin`; cualquier otra cuenta ve "Acceso restrin
 |---|---|
 | Resumen | KPIs del ecosistema, plantas por estado y visibilidad, estado del sistema, actividad reciente |
 | Plantas | Listado con filtros; **crear** planta; detalle con **editar**, **miembros y roles** (asignar/quitar), **etapas** y **redes** (habilitar, publicar) |
+| Proveedores y contratistas | **Aprobar** solicitudes de registro (y verificar), suspender y reactivar, calificar (0–5), editar razón social / NIF / país, **asignar responsables** y crear empresas ya activas |
 | Catálogo de activos | Alta y edición de **modelos, tipos, familias y fabricantes** |
 | Etapas y redes | Catálogo maestro (D01–D20 y FUR-…), solo lectura |
 | Actividad y auditoría | Eventos recientes de auditoría |
 
 **Pendiente (requiere endpoints nuevos en la API):** listado global de usuarios, matriz de roles y permisos, e historial completo de auditoría con filtros.
+
+## Registro y aprobaciones
+
+El panel de administración **no tiene registro público**: solo entran administradores del ecosistema. Desde aquí se aprueba lo que piden los demás portales: empresas proveedoras y contratistas (*Proveedores y contratistas*) y accesos a plantas (*Solicitudes de acceso*: aprobar eligiendo el rol, o rechazar). El resumen avisa de lo pendiente.
 
 ## Ejecutar
 
