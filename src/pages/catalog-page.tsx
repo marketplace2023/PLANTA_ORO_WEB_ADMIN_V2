@@ -1,6 +1,7 @@
 import { ImageIcon, Pencil, Plus, Search } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { CheckGroup } from '@/components/check-group'
 import { FormDialog, type Field, type Values } from '@/components/form-dialog'
 import { errorMessage, selectClass } from '@/lib/forms'
 import { DataTable, Empty, Failed, Loading, Panel, Pill, ScreenHeader, Segmented, td } from '@/components/kit'
@@ -15,6 +16,8 @@ import {
   useFamilies,
   useManufacturers,
   useModels,
+  useNetworkMasters,
+  useStageMasters,
   useTypes,
   useUpdateFamily,
   useUpdateManufacturer,
@@ -85,41 +88,68 @@ function FamiliesTab() {
   )
 }
 
-function TypesTab() {
-  const q = useTypes()
+/** Alta/edición de un tipo, con las etapas del proceso y las redes transversales donde se usa (con eso se filtra el catálogo público). */
+function TypeDialog({ row, onClose }: { row?: AssetType; onClose: () => void }) {
   const families = useFamilies()
+  const stages = useStageMasters()
+  const networks = useNetworkMasters()
   const create = useCreateType()
   const update = useUpdateType()
-  const [form, setForm] = useState<{ row?: AssetType } | null>(null)
-  const editing = form?.row
-  const m = editing ? update : create
+  const [stageCodes, setStageCodes] = useState<string[]>(row?.stageCodes ?? [])
+  const [networkCodes, setNetworkCodes] = useState<string[]>(row?.networkCodes ?? [])
+  const m = row ? update : create
   const fields: Field[] = [
     { name: 'familyCode', label: 'Familia', type: 'select', required: true, options: (families.data ?? []).map((f) => ({ value: f.code, label: f.name })) },
-    { name: 'code', label: 'Código', required: true, disabled: !!editing, placeholder: 'PUMP_CENTRIFUGAL', hint: 'No se puede cambiar.' },
+    { name: 'code', label: 'Código', required: true, disabled: !!row, placeholder: 'PUMP_CENTRIFUGAL', hint: 'No se puede cambiar.' },
     { name: 'name', label: 'Nombre', required: true, wide: true },
   ]
   const submit = (v: Values) => {
-    const done = { onSuccess: () => { toast.success(editing ? 'Tipo actualizado' : 'Tipo creado'); setForm(null) } }
-    if (editing) update.mutate({ id: editing.id, name: String(v.name).trim(), familyCode: String(v.familyCode) }, done)
-    else create.mutate({ familyCode: String(v.familyCode), code: upper(v.code), name: String(v.name).trim() }, done)
+    const done = { onSuccess: () => { toast.success(row ? 'Tipo actualizado' : 'Tipo creado'); onClose() } }
+    if (row) update.mutate({ id: row.id, name: String(v.name).trim(), familyCode: String(v.familyCode), stageCodes, networkCodes }, done)
+    else create.mutate({ familyCode: String(v.familyCode), code: upper(v.code), name: String(v.name).trim(), stageCodes, networkCodes }, done)
   }
   return (
+    <FormDialog
+      title={row ? `Editar tipo ${row.code}` : 'Nuevo tipo'}
+      fields={fields}
+      initial={row ? { familyCode: row.familyCode, code: row.code, name: row.name } : {}}
+      busy={m.isPending}
+      error={errorMessage(m.error)}
+      extra={
+        <>
+          <CheckGroup legend="Etapas del proceso donde se usa" options={(stages.data ?? []).map((s) => ({ value: s.code, label: `${s.code} · ${s.name}` }))} value={stageCodes} onChange={setStageCodes} help="Así aparece el tipo al filtrar el catálogo por etapa." />
+          <CheckGroup legend="Redes transversales" options={(networks.data ?? []).map((n) => ({ value: n.code, label: n.name }))} value={networkCodes} onChange={setNetworkCodes} help="Así aparece el tipo al filtrar el catálogo por red transversal." />
+        </>
+      }
+      onClose={onClose}
+      onSubmit={submit}
+    />
+  )
+}
+
+function TypesTab() {
+  const q = useTypes()
+  const [form, setForm] = useState<{ row?: AssetType } | null>(null)
+  const summary = (codes: string[], max: number) => (codes.length === 0 ? null : codes.length > max ? `${codes.slice(0, max).join(', ')} +${codes.length - max}` : codes.join(', '))
+  return (
     <>
-      <Section title="Tipos de activo" subtitle="Qué clase de equipo es (bomba centrífuga, molino, chancadora…)." addLabel="Nuevo tipo" onAdd={() => { create.reset(); update.reset(); setForm({}) }}>
+      <Section title="Tipos de activo" subtitle="Qué clase de equipo es (bomba centrífuga, molino, chancadora…) y dónde se usa." addLabel="Nuevo tipo" onAdd={() => setForm({})}>
         {q.isLoading ? <div className="p-4"><Loading rows={5} /></div> : q.isError ? <Failed what="los tipos" onRetry={() => void q.refetch()} /> : q.data && q.data.length > 0 ? (
-          <DataTable head={['Código', 'Tipo', 'Familia', { label: '', right: true }]}>
+          <DataTable head={['Código', 'Tipo', 'Familia', 'Etapas', 'Redes', { label: '', right: true }]}>
             {q.data.map((t) => (
               <tr key={t.id}>
                 <td className={`${td} fur-code text-xs`}>{t.code}</td>
                 <td className={`${td} font-medium text-fur-navy-900`}>{t.name}</td>
                 <td className={td}>{t.familyName}</td>
-                <td className={`${td} text-right`}><Button size="xs" variant="secondary" aria-label={`Editar ${t.name}`} onClick={() => { update.reset(); setForm({ row: t }) }}><Pencil /> Editar</Button></td>
+                <td className={`${td} fur-code text-xs`} title={t.stageCodes.join(', ')}>{summary(t.stageCodes, 4) ?? <span className="text-muted-foreground">Sin etapas</span>}</td>
+                <td className={`${td} text-xs`} title={t.networkCodes.join(', ')}>{summary(t.networkCodes.map((c) => c.replace('FUR-', '')), 4) ?? <span className="text-muted-foreground">Sin redes</span>}</td>
+                <td className={`${td} text-right`}><Button size="xs" variant="secondary" aria-label={`Editar ${t.name}`} onClick={() => setForm({ row: t })}><Pencil /> Editar</Button></td>
               </tr>
             ))}
           </DataTable>
         ) : <Empty>No hay tipos.</Empty>}
       </Section>
-      {form && <FormDialog title={editing ? `Editar tipo ${editing.code}` : 'Nuevo tipo'} fields={fields} initial={editing ? { familyCode: editing.familyCode, code: editing.code, name: editing.name } : {}} busy={m.isPending} error={errorMessage(m.error)} onClose={() => setForm(null)} onSubmit={submit} />}
+      {form && <TypeDialog row={form.row} onClose={() => setForm(null)} />}
     </>
   )
 }
