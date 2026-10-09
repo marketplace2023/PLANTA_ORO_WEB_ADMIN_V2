@@ -118,7 +118,7 @@ export function MastersPage() {
 
       <p className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
         <Info className="mt-0.5 size-4 shrink-0 text-fur-blue-500" aria-hidden />
-        Las redes (FUR-…) se crean, editan y eliminan aquí. Las etapas (D01–D20) son parte de la arquitectura del ecosistema y son de solo lectura. Para habilitar o ocultar una red o etapa en una planta, ve a <strong className="font-semibold text-fur-navy-900">Plantas → Administrar</strong>.
+        Las redes (FUR-…) se crean, editan y eliminan aquí. Las etapas (D01–D19) son parte de la arquitectura del ecosistema y son de solo lectura. Para habilitar o ocultar una red o etapa en una planta, ve a <strong className="font-semibold text-fur-navy-900">Plantas → Administrar</strong>.
       </p>
 
       <Panel
