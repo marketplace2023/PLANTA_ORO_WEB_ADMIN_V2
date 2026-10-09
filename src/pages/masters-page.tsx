@@ -43,19 +43,20 @@ function NetworkDialog({ row, onClose }: { row?: NetworkMaster; onClose: () => v
     { name: 'name', label: 'Nombre', required: true },
     { name: 'colorToken', label: 'Color', type: 'select', options: NETWORK_COLORS.map((c) => ({ value: c.token, label: c.label })), hint: 'Se usa en las tarjetas y en los tableros de la red.' },
     { name: 'icon', label: 'Ícono', placeholder: 'droplets', hint: 'Nombre corto del ícono (opcional).' },
+    { name: 'sequence', label: 'Orden', type: 'number', min: 0, hint: 'Menor número, más arriba en los listados. Vacío = al final.' },
     { name: 'description', label: 'Descripción', type: 'textarea', wide: true },
   ]
   const submit = (v: Values) => {
     const done = { onSuccess: () => { toast.success(row ? 'Red actualizada' : 'Red creada'); onClose() } }
-    if (row) update.mutate({ id: row.id, name: String(v.name).trim(), description: nul(v.description), icon: nul(v.icon), colorToken: nul(v.colorToken) }, done)
-    else create.mutate({ code: String(v.code).trim().toUpperCase(), name: String(v.name).trim(), description: opt(v.description), icon: opt(v.icon), colorToken: opt(v.colorToken) }, done)
+    if (row) update.mutate({ id: row.id, name: String(v.name).trim(), description: nul(v.description), icon: nul(v.icon), colorToken: nul(v.colorToken), ...(String(v.sequence).trim() !== '' && { sequence: Number(v.sequence) }) }, done)
+    else create.mutate({ code: String(v.code).trim().toUpperCase(), name: String(v.name).trim(), description: opt(v.description), icon: opt(v.icon), colorToken: opt(v.colorToken), ...(String(v.sequence).trim() !== '' && { sequence: Number(v.sequence) }) }, done)
   }
   return (
     <FormDialog
       title={row ? `Editar red ${row.code}` : 'Nueva red transversal'}
       description={row ? undefined : 'Después podrás habilitarla en cada planta y asignarla a los tipos del catálogo.'}
       fields={fields}
-      initial={row ? { code: row.code, name: row.name, description: row.description ?? '', icon: row.icon ?? '', colorToken: row.colorToken ?? '' } : {}}
+      initial={row ? { code: row.code, name: row.name, description: row.description ?? '', icon: row.icon ?? '', colorToken: row.colorToken ?? '', sequence: String(row.sequence) } : {}}
       busy={m.isPending}
       error={errorMessage(m.error)}
       onClose={onClose}

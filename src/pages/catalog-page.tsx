@@ -1,4 +1,4 @@
-import { ImageIcon, Pencil, Plus, Search } from 'lucide-react'
+import { ImageIcon, ListChecks, Pencil, Plus, Search } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { CheckGroup } from '@/components/check-group'
@@ -6,6 +6,7 @@ import { FormDialog, type Field, type Values } from '@/components/form-dialog'
 import { errorMessage, selectClass } from '@/lib/forms'
 import { DataTable, Empty, Failed, Loading, Panel, Pill, ScreenHeader, Segmented, td } from '@/components/kit'
 import { ModelImagePicker, type ImageChange } from '@/components/model-image-picker'
+import { ModelVariablesDialog, VariablesTab } from '@/pages/catalog-variables'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -34,7 +35,7 @@ import { cn } from '@/lib/utils'
 import { apiUrl } from '@/lib/api'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 
-type Tab = 'families' | 'types' | 'manufacturers' | 'models'
+type Tab = 'families' | 'types' | 'manufacturers' | 'models' | 'variables'
 
 const opt = (v: string | boolean) => (String(v).trim() === '' ? undefined : String(v).trim())
 const nul = (v: string | boolean) => (String(v).trim() === '' ? null : String(v).trim())
@@ -102,17 +103,18 @@ function TypeDialog({ row, onClose }: { row?: AssetType; onClose: () => void }) 
     { name: 'familyCode', label: 'Familia', type: 'select', required: true, options: (families.data ?? []).map((f) => ({ value: f.code, label: f.name })) },
     { name: 'code', label: 'Código', required: true, disabled: !!row, placeholder: 'PUMP_CENTRIFUGAL', hint: 'No se puede cambiar.' },
     { name: 'name', label: 'Nombre', required: true, wide: true },
+    { name: 'description', label: 'Descripción', type: 'textarea', placeholder: 'Criba / parrilla de recepción de mineral ROM', hint: 'Aparece bajo el nombre en la ficha técnica del activo.' },
   ]
   const submit = (v: Values) => {
     const done = { onSuccess: () => { toast.success(row ? 'Tipo actualizado' : 'Tipo creado'); onClose() } }
-    if (row) update.mutate({ id: row.id, name: String(v.name).trim(), familyCode: String(v.familyCode), stageCodes, networkCodes }, done)
-    else create.mutate({ familyCode: String(v.familyCode), code: upper(v.code), name: String(v.name).trim(), stageCodes, networkCodes }, done)
+    if (row) update.mutate({ id: row.id, name: String(v.name).trim(), familyCode: String(v.familyCode), description: nul(v.description), stageCodes, networkCodes }, done)
+    else create.mutate({ familyCode: String(v.familyCode), code: upper(v.code), name: String(v.name).trim(), description: opt(v.description), stageCodes, networkCodes }, done)
   }
   return (
     <FormDialog
       title={row ? `Editar tipo ${row.code}` : 'Nuevo tipo'}
       fields={fields}
-      initial={row ? { familyCode: row.familyCode, code: row.code, name: row.name } : {}}
+      initial={row ? { familyCode: row.familyCode, code: row.code, name: row.name, description: row.description ?? '' } : {}}
       busy={m.isPending}
       error={errorMessage(m.error)}
       extra={
@@ -208,6 +210,7 @@ function ModelsTab() {
   const [page, setPage] = useState(1)
   const q = useModels({ search: useDebouncedValue(search.trim()) || undefined, family: family || undefined, status, page })
   const [form, setForm] = useState<{ row?: Model } | null>(null)
+  const [variablesOf, setVariablesOf] = useState<Model | null>(null)
   const editing = form?.row
   const mfOptions = (manufacturers.data ?? []).map((f) => ({ value: f.id, label: f.name }))
   const fields: Field[] = editing
@@ -283,7 +286,12 @@ function ModelsTab() {
                   <td className={td}>{r.family.name}</td>
                   <td className={td}>{r.manufacturer?.name ?? '—'}</td>
                   <td className={td}><Pill label={r.status === 'ACTIVE' ? 'Activo' : 'Inactivo'} color={r.status === 'ACTIVE' ? 'var(--fur-green-500)' : 'var(--fur-steel-500)'} /></td>
-                  <td className={`${td} text-right`}><Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setForm({ row: r }) }}><Pencil /> Editar</Button></td>
+                  <td className={`${td} text-right`}>
+                    <div className="flex justify-end gap-1.5">
+                      <Button size="xs" variant="outline" aria-label={`Datos del fabricante de ${r.modelName}`} onClick={() => setVariablesOf(r)}><ListChecks /> Datos del fabricante</Button>
+                      <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setForm({ row: r }) }}><Pencil /> Editar</Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </DataTable>
@@ -297,6 +305,7 @@ function ModelsTab() {
           </>
         ) : <Empty>No hay modelos con estos filtros.</Empty>}
       </Section>
+      {variablesOf && <ModelVariablesDialog model={variablesOf} onClose={() => setVariablesOf(null)} />}
       {form && (
         <FormDialog
           title={editing ? `Editar ${editing.modelName}` : 'Nuevo modelo'}
@@ -327,6 +336,7 @@ export function CatalogPage() {
           { value: 'types', label: 'Tipos' },
           { value: 'families', label: 'Familias' },
           { value: 'manufacturers', label: 'Fabricantes' },
+          { value: 'variables', label: 'Variables' },
         ]}
       />
       <div className="mt-3">
@@ -334,6 +344,7 @@ export function CatalogPage() {
         {tab === 'types' && <TypesTab />}
         {tab === 'families' && <FamiliesTab />}
         {tab === 'manufacturers' && <ManufacturersTab />}
+        {tab === 'variables' && <VariablesTab />}
       </div>
     </>
   )

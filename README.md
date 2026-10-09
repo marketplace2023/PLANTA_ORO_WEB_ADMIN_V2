@@ -11,7 +11,7 @@ Solo entra quien tiene `isGlobalAdmin`; cualquier otra cuenta ve "Acceso restrin
 | Resumen | KPIs del ecosistema, plantas por estado y visibilidad, estado del sistema, actividad reciente |
 | Plantas | Listado con filtros; **crear** planta; detalle con **editar**, **miembros y roles** (asignar/quitar), **etapas** y **redes** (habilitar, publicar) |
 | Proveedores y contratistas | **Aprobar** solicitudes de registro (y verificar), suspender y reactivar, calificar (0–5), editar razón social / NIF / país, **asignar responsables** y crear empresas ya activas |
-| Catálogo de activos | Alta y edición de **modelos, tipos, familias y fabricantes** |
+| Catálogo de activos | Alta y edición de **modelos, tipos, familias y fabricantes**, y de las **variables de la ficha técnica**: la pestaña *Variables* las define (tipo de dato, unidad, red, etapa, tipo y sección) y el botón *Datos del fabricante* de cada modelo registra sus valores |
 | Etapas y redes | Etapas D01–D19 (solo lectura) y **redes transversales FUR-… con alta, edición y eliminación**: código fijo, nombre, color (paleta de los portales), ícono y descripción. Cada tarjeta muestra en cuántas plantas y tipos se usa; eliminar una red en uso pide confirmar y la quita de esas plantas y tipos |
 | Actividad y auditoría | Eventos recientes de auditoría |
 

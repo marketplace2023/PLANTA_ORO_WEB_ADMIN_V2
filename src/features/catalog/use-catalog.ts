@@ -4,9 +4,9 @@ import { api, formBody, jsonBody } from '@/lib/api'
 export type Page<T> = { items: T[]; total: number; page: number; pageSize: number }
 
 export type StageMaster = { id: string; code: string; name: string; sequenceDefault: number; description: string | null; stageGroup: string; colorToken: string | null }
-export type NetworkMaster = { id: string; code: string; name: string; description: string | null; icon: string | null; colorToken: string | null }
+export type NetworkMaster = { id: string; code: string; name: string; description: string | null; icon: string | null; colorToken: string | null; sequence: number }
 export type Family = { id: string; code: string; name: string; icon: string | null }
-export type AssetType = { id: string; code: string; name: string; familyCode: string; familyName: string; stageCodes: string[]; networkCodes: string[] }
+export type AssetType = { id: string; code: string; name: string; description: string | null; familyCode: string; familyName: string; stageCodes: string[]; networkCodes: string[] }
 export type Manufacturer = { id: string; name: string; countryCode: string | null }
 export type Model = {
   id: string
@@ -62,7 +62,7 @@ export const useCreateModel = () => useCatalogMutation((v: { typeCode: string; m
 export const useUpdateModel = () => useCatalogMutation(({ id, ...v }: { id: string; modelName?: string; manufacturerId?: string | null; status?: 'ACTIVE' | 'INACTIVE' }) => send('PATCH', `/catalog/models/${id}`, v))
 
 /** Redes transversales: el administrador las crea, edita y elimina (el código no cambia). */
-export type NetworkInput = { name: string; description?: string | null; icon?: string | null; colorToken?: string | null }
+export type NetworkInput = { name: string; description?: string | null; icon?: string | null; colorToken?: string | null; sequence?: number }
 export type NetworkUsage = { id: string; plants: number; assets: number; types: number }
 
 /** Dónde se usa cada red (plantas que la habilitan, activos vinculados y tipos del catálogo). */
@@ -71,6 +71,50 @@ export const useCreateNetwork = () => useCatalogMutation((v: NetworkInput & { co
 export const useUpdateNetwork = () => useCatalogMutation(({ id, ...v }: Partial<NetworkInput> & { id: string }) => send<NetworkMaster>('PATCH', `/networks/catalog/${id}`, v))
 /** `force` la quita también de las plantas que la habilitan (y desvincula sus activos). */
 export const useDeleteNetwork = () => useCatalogMutation(({ id, force }: { id: string; force: boolean }) => api<void>(`/networks/catalog/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' }))
+
+/** Variables de la ficha técnica (datos del fabricante): se definen una vez y aplican según red, etapa y tipo. */
+export type VariableType = 'NUMBER' | 'RANGE' | 'TEXT' | 'LIST' | 'BOOLEAN'
+export type VariableDef = {
+  id: string
+  code: string
+  label: string
+  unit: string | null
+  valueType: VariableType
+  group: string | null
+  isKey: boolean
+  sortOrder: number
+  networkCode: string | null
+  networkName: string | null
+  stageCode: string | null
+  assetTypeCode: string | null
+}
+export type ModelVariable = VariableDef & { value: unknown }
+export type VariableInput = {
+  label: string
+  unit?: string | null
+  valueType: VariableType
+  networkCode?: string | null
+  stageCode?: string | null
+  assetTypeCode?: string | null
+  group?: string | null
+  isKey?: boolean
+  sortOrder?: number
+}
+
+export const useVariables = () => useQuery({ queryKey: ['catalog', 'variables'], queryFn: () => api<VariableDef[]>('/catalog/variables') })
+export const useCreateVariable = () =>
+  useCatalogMutation((v: Omit<VariableInput, 'unit' | 'networkCode' | 'stageCode' | 'assetTypeCode' | 'group'> & { unit?: string; networkCode?: string; stageCode?: string; assetTypeCode?: string; group?: string }) =>
+    send<VariableDef>('POST', '/catalog/variables', v),
+  )
+export const useUpdateVariable = () => useCatalogMutation(({ id, ...v }: Partial<VariableInput> & { id: string }) => send<VariableDef>('PATCH', `/catalog/variables/${id}`, v))
+export const useDeleteVariable = () => useCatalogMutation((id: string) => api<void>(`/catalog/variables/${id}`, { method: 'DELETE' }))
+
+/** Variables que aplican a un modelo (según su tipo) con el valor registrado; null si aún no tiene. */
+export const useModelVariables = (modelId: string | undefined) =>
+  useQuery({ queryKey: ['catalog', 'model-variables', modelId], queryFn: () => api<ModelVariable[]>(`/catalog/models/${modelId}/variables`), enabled: !!modelId })
+/** Registra los datos del fabricante de un modelo: `{ CODIGO: valor }`, y `null` borra el valor. */
+export const useSetModelVariables = () =>
+  useCatalogMutation(({ id, values }: { id: string; values: Record<string, unknown> }) => api<ModelVariable[]>(`/catalog/models/${id}/variables`, { method: 'PUT', ...jsonBody({ values }) }))
 
 /** Foto del modelo (solo administrador). Reemplaza la anterior si ya había una. */
 export const useUploadModelImage = () => useCatalogMutation(({ id, file }: { id: string; file: File }) => api<{ id: string; imageUrl: string }>(`/catalog/models/${id}/image`, { method: 'POST', ...formBody({}, file) }))
