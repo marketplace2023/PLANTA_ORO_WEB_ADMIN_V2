@@ -83,19 +83,23 @@ export type VariableDef = {
   group: string | null
   isKey: boolean
   sortOrder: number
-  networkCode: string | null
-  networkName: string | null
-  stageCode: string | null
-  assetTypeCode: string | null
+  /** Alcance: listas de códigos; vacía = aplica a todas (una variable puede compartirse entre varios equipos). */
+  networkCodes: string[]
+  stageCodes: string[]
+  assetTypeCodes: string[]
+  /** Valor general: lo que muestran los modelos que no registraron uno propio. */
+  defaultValue: unknown
 }
 export type ModelVariable = VariableDef & { value: unknown }
 export type VariableInput = {
   label: string
   unit?: string | null
   valueType: VariableType
-  networkCode?: string | null
-  stageCode?: string | null
-  assetTypeCode?: string | null
+  networkCodes?: string[]
+  stageCodes?: string[]
+  assetTypeCodes?: string[]
+  /** null quita el valor general. */
+  defaultValue?: unknown
   group?: string | null
   isKey?: boolean
   sortOrder?: number
@@ -103,9 +107,7 @@ export type VariableInput = {
 
 export const useVariables = () => useQuery({ queryKey: ['catalog', 'variables'], queryFn: () => api<VariableDef[]>('/catalog/variables') })
 export const useCreateVariable = () =>
-  useCatalogMutation((v: Omit<VariableInput, 'unit' | 'networkCode' | 'stageCode' | 'assetTypeCode' | 'group'> & { unit?: string; networkCode?: string; stageCode?: string; assetTypeCode?: string; group?: string }) =>
-    send<VariableDef>('POST', '/catalog/variables', v),
-  )
+  useCatalogMutation((v: Omit<VariableInput, 'unit' | 'group'> & { unit?: string; group?: string }) => send<VariableDef>('POST', '/catalog/variables', v))
 export const useUpdateVariable = () => useCatalogMutation(({ id, ...v }: Partial<VariableInput> & { id: string }) => send<VariableDef>('PATCH', `/catalog/variables/${id}`, v))
 export const useDeleteVariable = () => useCatalogMutation((id: string) => api<void>(`/catalog/variables/${id}`, { method: 'DELETE' }))
 
