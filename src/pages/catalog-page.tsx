@@ -1,7 +1,8 @@
-import { ImageIcon, ListChecks, Pencil, Plus, Search } from 'lucide-react'
+import { ImageIcon, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { CheckGroup } from '@/components/check-group'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { FormDialog, type Field, type Values } from '@/components/form-dialog'
 import { errorMessage, selectClass } from '@/lib/forms'
 import { DataTable, Empty, Failed, Loading, Panel, Pill, ScreenHeader, Segmented, td } from '@/components/kit'
@@ -14,6 +15,10 @@ import {
   useCreateManufacturer,
   useCreateModel,
   useCreateType,
+  useDeleteFamily,
+  useDeleteManufacturer,
+  useDeleteModel,
+  useDeleteType,
   useFamilies,
   useManufacturers,
   useModels,
@@ -54,6 +59,8 @@ function FamiliesTab() {
   const q = useFamilies()
   const create = useCreateFamily()
   const update = useUpdateFamily()
+  const del = useDeleteFamily()
+  const [removing, setRemoving] = useState<Family | null>(null)
   const [form, setForm] = useState<{ row?: Family } | null>(null)
   const editing = form?.row
   const m = editing ? update : create
@@ -78,12 +85,27 @@ function FamiliesTab() {
                 <td className={`${td} fur-code text-xs`}>{f.code}</td>
                 <td className={`${td} font-medium text-fur-navy-900`}>{f.name}</td>
                 <td className={td}>{f.icon ?? '—'}</td>
-                <td className={`${td} text-right`}><Button size="xs" variant="secondary" aria-label={`Editar ${f.name}`} onClick={() => { update.reset(); setForm({ row: f }) }}><Pencil /> Editar</Button></td>
+                <td className={`${td} text-right`}>
+                  <div className="flex justify-end gap-1.5">
+                    <Button size="xs" variant="secondary" aria-label={`Editar ${f.name}`} onClick={() => { update.reset(); setForm({ row: f }) }}><Pencil /> Editar</Button>
+                    <Button size="xs" variant="outline" aria-label={`Eliminar ${f.name}`} onClick={() => { del.reset(); setRemoving(f) }}><Trash2 /> Eliminar</Button>
+                  </div>
+                </td>
               </tr>
             ))}
           </DataTable>
         ) : <Empty>No hay familias.</Empty>}
       </Section>
+      {removing && (
+        <ConfirmDeleteDialog
+          title={`Eliminar la familia ${removing.name}`}
+          description="Se elimina del catálogo. Solo es posible si no tiene tipos."
+          pending={del.isPending}
+          error={errorMessage(del.error)}
+          onConfirm={() => del.mutate(removing.id, { onSuccess: () => { toast.success('Familia eliminada'); setRemoving(null) } })}
+          onClose={() => setRemoving(null)}
+        />
+      )}
       {form && <FormDialog title={editing ? `Editar familia ${editing.code}` : 'Nueva familia'} fields={fields} initial={editing ? { code: editing.code, name: editing.name, icon: editing.icon ?? '' } : {}} busy={m.isPending} error={errorMessage(m.error)} onClose={() => setForm(null)} onSubmit={submit} />}
     </>
   )
@@ -131,6 +153,8 @@ function TypeDialog({ row, onClose }: { row?: AssetType; onClose: () => void }) 
 
 function TypesTab() {
   const q = useTypes()
+  const del = useDeleteType()
+  const [removing, setRemoving] = useState<AssetType | null>(null)
   const [form, setForm] = useState<{ row?: AssetType } | null>(null)
   const summary = (codes: string[], max: number) => (codes.length === 0 ? null : codes.length > max ? `${codes.slice(0, max).join(', ')} +${codes.length - max}` : codes.join(', '))
   return (
@@ -145,12 +169,27 @@ function TypesTab() {
                 <td className={td}>{t.familyName}</td>
                 <td className={`${td} fur-code text-xs`} title={t.stageCodes.join(', ')}>{summary(t.stageCodes, 4) ?? <span className="text-muted-foreground">Sin etapas</span>}</td>
                 <td className={`${td} text-xs`} title={t.networkCodes.join(', ')}>{summary(t.networkCodes.map((c) => c.replace('FUR-', '')), 4) ?? <span className="text-muted-foreground">Sin redes</span>}</td>
-                <td className={`${td} text-right`}><Button size="xs" variant="secondary" aria-label={`Editar ${t.name}`} onClick={() => setForm({ row: t })}><Pencil /> Editar</Button></td>
+                <td className={`${td} text-right`}>
+                  <div className="flex justify-end gap-1.5">
+                    <Button size="xs" variant="secondary" aria-label={`Editar ${t.name}`} onClick={() => setForm({ row: t })}><Pencil /> Editar</Button>
+                    <Button size="xs" variant="outline" aria-label={`Eliminar ${t.name}`} onClick={() => { del.reset(); setRemoving(t) }}><Trash2 /> Eliminar</Button>
+                  </div>
+                </td>
               </tr>
             ))}
           </DataTable>
         ) : <Empty>No hay tipos.</Empty>}
       </Section>
+      {removing && (
+        <ConfirmDeleteDialog
+          title={`Eliminar el tipo ${removing.name}`}
+          description="Se elimina del catálogo junto con sus etapas y redes. Solo es posible si no tiene modelos."
+          pending={del.isPending}
+          error={errorMessage(del.error)}
+          onConfirm={() => del.mutate(removing.id, { onSuccess: () => { toast.success('Tipo eliminado'); setRemoving(null) } })}
+          onClose={() => setRemoving(null)}
+        />
+      )}
       {form && <TypeDialog row={form.row} onClose={() => setForm(null)} />}
     </>
   )
@@ -160,6 +199,8 @@ function ManufacturersTab() {
   const q = useManufacturers()
   const create = useCreateManufacturer()
   const update = useUpdateManufacturer()
+  const del = useDeleteManufacturer()
+  const [removing, setRemoving] = useState<Manufacturer | null>(null)
   const [form, setForm] = useState<{ row?: Manufacturer } | null>(null)
   const editing = form?.row
   const m = editing ? update : create
@@ -182,12 +223,27 @@ function ManufacturersTab() {
               <tr key={f.id}>
                 <td className={`${td} font-medium text-fur-navy-900`}>{f.name}</td>
                 <td className={td}>{f.countryCode ?? '—'}</td>
-                <td className={`${td} text-right`}><Button size="xs" variant="secondary" aria-label={`Editar ${f.name}`} onClick={() => { update.reset(); setForm({ row: f }) }}><Pencil /> Editar</Button></td>
+                <td className={`${td} text-right`}>
+                  <div className="flex justify-end gap-1.5">
+                    <Button size="xs" variant="secondary" aria-label={`Editar ${f.name}`} onClick={() => { update.reset(); setForm({ row: f }) }}><Pencil /> Editar</Button>
+                    <Button size="xs" variant="outline" aria-label={`Eliminar ${f.name}`} onClick={() => { del.reset(); setRemoving(f) }}><Trash2 /> Eliminar</Button>
+                  </div>
+                </td>
               </tr>
             ))}
           </DataTable>
         ) : <Empty>No hay fabricantes.</Empty>}
       </Section>
+      {removing && (
+        <ConfirmDeleteDialog
+          title={`Eliminar el fabricante ${removing.name}`}
+          description="Se elimina del catálogo. Solo es posible si ningún modelo ni activo lo usa."
+          pending={del.isPending}
+          error={errorMessage(del.error)}
+          onConfirm={() => del.mutate(removing.id, { onSuccess: () => { toast.success('Fabricante eliminado'); setRemoving(null) } })}
+          onClose={() => setRemoving(null)}
+        />
+      )}
       {form && <FormDialog title={editing ? `Editar ${editing.name}` : 'Nuevo fabricante'} fields={fields} initial={editing ? { name: editing.name, countryCode: editing.countryCode ?? '' } : {}} busy={m.isPending} error={errorMessage(m.error)} onClose={() => setForm(null)} onSubmit={submit} />}
     </>
   )
@@ -199,6 +255,8 @@ function ModelsTab() {
   const families = useFamilies()
   const create = useCreateModel()
   const update = useUpdateModel()
+  const del = useDeleteModel()
+  const [removing, setRemoving] = useState<Model | null>(null)
   const uploadImage = useUploadModelImage()
   const removeImage = useRemoveModelImage()
   const [image, setImage] = useState<ImageChange>({ file: null, remove: false })
@@ -217,7 +275,7 @@ function ModelsTab() {
     ? [
         { name: 'modelName', label: 'Modelo', required: true, wide: true },
         { name: 'manufacturerId', label: 'Fabricante', type: 'select', options: mfOptions },
-        { name: 'status', label: 'Estado', type: 'select', required: true, options: [{ value: 'ACTIVE', label: 'Activo' }, { value: 'INACTIVE', label: 'Inactivo' }], hint: 'Los modelos se desactivan, no se borran: hay activos que los usan.' },
+        { name: 'status', label: 'Estado', type: 'select', required: true, options: [{ value: 'ACTIVE', label: 'Activo' }, { value: 'INACTIVE', label: 'Inactivo' }], hint: 'Desactívalo si hay activos que lo usan; si está repetido y nadie lo usa, elimínalo desde la tabla.' },
       ]
     : [
         { name: 'typeCode', label: 'Tipo de activo', type: 'select', required: true, options: (types.data ?? []).map((t) => ({ value: t.code, label: `${t.familyName} · ${t.name}` })), wide: true },
@@ -290,6 +348,7 @@ function ModelsTab() {
                     <div className="flex justify-end gap-1.5">
                       <Button size="xs" variant="outline" aria-label={`Datos del fabricante de ${r.modelName}`} onClick={() => setVariablesOf(r)}><ListChecks /> Datos del fabricante</Button>
                       <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setForm({ row: r }) }}><Pencil /> Editar</Button>
+                      <Button size="xs" variant="outline" aria-label={`Eliminar ${r.modelName}`} onClick={() => { del.reset(); setRemoving(r) }}><Trash2 /> Eliminar</Button>
                     </div>
                   </td>
                 </tr>
@@ -306,6 +365,16 @@ function ModelsTab() {
         ) : <Empty>No hay modelos con estos filtros.</Empty>}
       </Section>
       {variablesOf && <ModelVariablesDialog model={variablesOf} onClose={() => setVariablesOf(null)} />}
+      {removing && (
+        <ConfirmDeleteDialog
+          title={`Eliminar el modelo ${removing.modelName}`}
+          description="Se elimina del catálogo junto con su foto y sus datos del fabricante. Solo es posible si ningún activo lo usa; si lo usa, desactívalo."
+          pending={del.isPending}
+          error={errorMessage(del.error)}
+          onConfirm={() => del.mutate(removing.id, { onSuccess: () => { toast.success('Modelo eliminado'); setRemoving(null) } })}
+          onClose={() => setRemoving(null)}
+        />
+      )}
       {form && (
         <FormDialog
           title={editing ? `Editar ${editing.modelName}` : 'Nuevo modelo'}

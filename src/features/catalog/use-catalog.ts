@@ -61,6 +61,13 @@ export const useUpdateManufacturer = () => useCatalogMutation(({ id, ...v }: { i
 export const useCreateModel = () => useCatalogMutation((v: { typeCode: string; manufacturerId?: string; modelName: string }) => send<{ id: string }>('POST', '/catalog/models', v))
 export const useUpdateModel = () => useCatalogMutation(({ id, ...v }: { id: string; modelName?: string; manufacturerId?: string | null; status?: 'ACTIVE' | 'INACTIVE' }) => send('PATCH', `/catalog/models/${id}`, v))
 
+/** Eliminar del catálogo: la API lo rechaza (409) con el motivo si algo lo usa (activos, modelos, tipos…). */
+const remove = (kind: 'families' | 'types' | 'manufacturers' | 'models') => (id: string) => api<void>(`/catalog/${kind}/${id}`, { method: 'DELETE' })
+export const useDeleteFamily = () => useCatalogMutation(remove('families'))
+export const useDeleteType = () => useCatalogMutation(remove('types'))
+export const useDeleteManufacturer = () => useCatalogMutation(remove('manufacturers'))
+export const useDeleteModel = () => useCatalogMutation(remove('models'))
+
 /** Redes transversales: el administrador las crea, edita y elimina (el código no cambia). */
 export type NetworkInput = { name: string; description?: string | null; icon?: string | null; colorToken?: string | null; sequence?: number }
 export type NetworkUsage = { id: string; plants: number; assets: number; types: number }
