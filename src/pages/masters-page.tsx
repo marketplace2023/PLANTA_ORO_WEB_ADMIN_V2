@@ -1,8 +1,9 @@
-import { Info, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ImageIcon, Info, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { FormDialog, type Field, type Values } from '@/components/form-dialog'
 import { Empty, Failed, Loading, Panel, ScreenHeader } from '@/components/kit'
+import { ModelImagePicker, type ImageChange } from '@/components/model-image-picker'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
@@ -10,11 +11,18 @@ import {
   useDeleteNetwork,
   useNetworkMasters,
   useNetworkUsage,
+  useRemoveNetworkImage,
+  useRemoveStageLayout,
   useStageMasters,
   useUpdateNetwork,
+  useUpdateStage,
+  useUploadNetworkImage,
+  useUploadStageLayout,
   type NetworkMaster,
   type NetworkUsage,
+  type StageMaster,
 } from '@/features/catalog/use-catalog'
+import { apiUrl } from '@/lib/api'
 import { errorMessage } from '@/lib/forms'
 
 /** Colores que ya definen las hojas de estilo de todos los portales (`--network-…`): una red nueva elige uno de ellos. */
@@ -37,19 +45,44 @@ const nul = (v: string | boolean) => (String(v).trim() === '' ? null : String(v)
 function NetworkDialog({ row, onClose }: { row?: NetworkMaster; onClose: () => void }) {
   const create = useCreateNetwork()
   const update = useUpdateNetwork()
-  const m = row ? update : create
+  const upload = useUploadNetworkImage()
+  const removeImage = useRemoveNetworkImage()
+  const [image, setImage] = useState<ImageChange>({ file: null, remove: false })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const fields: Field[] = [
     { name: 'code', label: 'Código', required: true, disabled: !!row, placeholder: 'FUR-AGUA', hint: 'FUR- y de 2 a 16 letras mayúsculas. No se puede cambiar.' },
     { name: 'name', label: 'Nombre', required: true },
     { name: 'colorToken', label: 'Color', type: 'select', options: NETWORK_COLORS.map((c) => ({ value: c.token, label: c.label })), hint: 'Se usa en las tarjetas y en los tableros de la red.' },
     { name: 'icon', label: 'Ícono', placeholder: 'droplets', hint: 'Nombre corto del ícono (opcional).' },
     { name: 'sequence', label: 'Orden', type: 'number', min: 0, hint: 'Menor número, más arriba en los listados. Vacío = al final.' },
-    { name: 'description', label: 'Descripción', type: 'textarea', wide: true },
+    { name: 'description', label: 'Descripción', type: 'textarea', wide: true, placeholder: 'Qué cubre esta red, equipos principales, alcance…' },
   ]
-  const submit = (v: Values) => {
-    const done = { onSuccess: () => { toast.success(row ? 'Red actualizada' : 'Red creada'); onClose() } }
-    if (row) update.mutate({ id: row.id, name: String(v.name).trim(), description: nul(v.description), icon: nul(v.icon), colorToken: nul(v.colorToken), ...(String(v.sequence).trim() !== '' && { sequence: Number(v.sequence) }) }, done)
-    else create.mutate({ code: String(v.code).trim().toUpperCase(), name: String(v.name).trim(), description: opt(v.description), icon: opt(v.icon), colorToken: opt(v.colorToken), ...(String(v.sequence).trim() !== '' && { sequence: Number(v.sequence) }) }, done)
+
+  /** Guarda la red y, después, aplica el cambio de imagen. Si la imagen falla, la red ya quedó guardada y se avisa. */
+  async function submit(v: Values) {
+    setSaving(true)
+    setError(null)
+    try {
+      const sequence = String(v.sequence).trim() !== '' ? { sequence: Number(v.sequence) } : {}
+      const saved = row
+        ? await update.mutateAsync({ id: row.id, name: String(v.name).trim(), description: nul(v.description), icon: nul(v.icon), colorToken: nul(v.colorToken), ...sequence })
+        : await create.mutateAsync({ code: String(v.code).trim().toUpperCase(), name: String(v.name).trim(), description: opt(v.description), icon: opt(v.icon), colorToken: opt(v.colorToken), ...sequence })
+      try {
+        if (image.file) await upload.mutateAsync({ id: saved.id, file: image.file })
+        else if (image.remove && row) await removeImage.mutateAsync(row.id)
+      } catch (e) {
+        toast.error(`Red guardada, pero la imagen no se pudo guardar: ${errorMessage(e) ?? 'error desconocido'}`)
+        onClose()
+        return
+      }
+      toast.success(row ? 'Red actualizada' : 'Red creada')
+      onClose()
+    } catch (e) {
+      setError(errorMessage(e))
+    } finally {
+      setSaving(false)
+    }
   }
   return (
     <FormDialog
@@ -57,10 +90,11 @@ function NetworkDialog({ row, onClose }: { row?: NetworkMaster; onClose: () => v
       description={row ? undefined : 'Después podrás habilitarla en cada planta y asignarla a los tipos del catálogo.'}
       fields={fields}
       initial={row ? { code: row.code, name: row.name, description: row.description ?? '', icon: row.icon ?? '', colorToken: row.colorToken ?? '', sequence: String(row.sequence) } : {}}
-      busy={m.isPending}
-      error={errorMessage(m.error)}
+      busy={saving}
+      error={error}
+      extra={<ModelImagePicker title="Imagen de la red" noun="imagen" subject="red" wide currentUrl={row?.layoutImageUrl ?? null} value={image} onChange={setImage} />}
       onClose={onClose}
-      onSubmit={submit}
+      onSubmit={(v) => void submit(v)}
     />
   )
 }
@@ -99,6 +133,58 @@ function DeleteNetworkDialog({ row, usage, onClose }: { row: NetworkMaster; usag
   )
 }
 
+/** Edición de una etapa: el código y el nombre son fijos; se edita la descripción y la imagen del layout. */
+function StageDialog({ row, onClose }: { row: StageMaster; onClose: () => void }) {
+  const update = useUpdateStage()
+  const upload = useUploadStageLayout()
+  const remove = useRemoveStageLayout()
+  const [image, setImage] = useState<ImageChange>({ file: null, remove: false })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fields: Field[] = [
+    { name: 'code', label: 'Código', disabled: true },
+    { name: 'name', label: 'Nombre', disabled: true, hint: 'El código y el nombre son los de la arquitectura del ecosistema.' },
+    { name: 'description', label: 'Descripción', type: 'textarea', wide: true, placeholder: 'Qué ocurre en esta etapa, equipos principales, entradas y salidas…' },
+  ]
+
+  /** Guarda la descripción y, después, aplica el cambio de imagen. Si la imagen falla, la descripción ya quedó guardada y se avisa. */
+  async function submit(v: Values) {
+    setSaving(true)
+    setError(null)
+    try {
+      const description = nul(v.description)
+      if (description !== (row.description ?? null)) await update.mutateAsync({ id: row.id, description })
+      try {
+        if (image.file) await upload.mutateAsync({ id: row.id, file: image.file })
+        else if (image.remove) await remove.mutateAsync(row.id)
+      } catch (e) {
+        toast.error(`Descripción guardada, pero la imagen no se pudo guardar: ${errorMessage(e) ?? 'error desconocido'}`)
+        onClose()
+        return
+      }
+      toast.success(`Etapa ${row.code} actualizada`)
+      onClose()
+    } catch (e) {
+      setError(errorMessage(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <FormDialog
+      title={`Editar etapa ${row.code}`}
+      fields={fields}
+      initial={{ code: row.code, name: row.name, description: row.description ?? '' }}
+      busy={saving}
+      error={error}
+      extra={<ModelImagePicker title="Imagen del layout" noun="imagen" subject="etapa" wide currentUrl={row.layoutImageUrl} value={image} onChange={setImage} />}
+      onClose={onClose}
+      onSubmit={(v) => void submit(v)}
+    />
+  )
+}
+
 function usageText(u: NetworkUsage | undefined) {
   if (!u) return null
   if (u.plants === 0 && u.types === 0) return 'Sin uso'
@@ -110,6 +196,7 @@ export function MastersPage() {
   const networks = useNetworkMasters()
   const usage = useNetworkUsage()
   const [dialog, setDialog] = useState<{ kind: 'edit'; row?: NetworkMaster } | { kind: 'delete'; row: NetworkMaster } | null>(null)
+  const [editingStage, setEditingStage] = useState<StageMaster | null>(null)
   const groups = [...new Set((stages.data ?? []).map((s) => s.stageGroup))]
   const usageById = new Map((usage.data ?? []).map((u) => [u.id, u]))
 
@@ -119,7 +206,7 @@ export function MastersPage() {
 
       <p className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
         <Info className="mt-0.5 size-4 shrink-0 text-fur-blue-500" aria-hidden />
-        Las redes (FUR-…) se crean, editan y eliminan aquí. Las etapas (D01–D19) son parte de la arquitectura del ecosistema y son de solo lectura. Para habilitar o ocultar una red o etapa en una planta, ve a <strong className="font-semibold text-fur-navy-900">Plantas → Administrar</strong>.
+        Las redes (FUR-…) se crean, editan y eliminan aquí; de cada red y etapa puedes editar la descripción y la imagen que se muestran en la página principal. Las etapas (D01–D19) son parte de la arquitectura del ecosistema: su código y nombre son fijos. Para habilitar o ocultar una red o etapa en una planta, ve a <strong className="font-semibold text-fur-navy-900">Plantas → Administrar</strong>.
       </p>
 
       <Panel
@@ -132,13 +219,16 @@ export function MastersPage() {
         ) : networks.isError ? (
           <Failed what="las redes" onRetry={() => void networks.refetch()} />
         ) : networks.data && networks.data.length > 0 ? (
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {networks.data.map((n) => (
-              <li key={n.id} className="flex flex-col rounded-lg border border-border border-l-4 bg-card p-3" style={{ borderLeftColor: n.colorToken ? `var(--${n.colorToken})` : undefined }}>
+              <li key={n.id} className="flex flex-col rounded-lg border border-border bg-fur-gray-50 p-3" style={{ borderTopColor: n.colorToken ? `var(--${n.colorToken})` : 'var(--fur-navy-800)', borderTopWidth: 3 }}>
                 <p className="fur-code text-[11px] text-muted-foreground">{n.code}</p>
                 <p className="font-semibold text-fur-navy-900">{n.name}</p>
-                {n.description && <p className="mt-1 line-clamp-2 text-xs text-fur-gray-600">{n.description}</p>}
-                <p className="mt-2 text-xs text-muted-foreground">{usageText(usageById.get(n.id)) ?? ' '}</p>
+                <span className="mt-2 grid h-24 place-items-center overflow-hidden rounded-md border border-border bg-white">
+                  {n.layoutImageUrl ? <img src={apiUrl(n.layoutImageUrl)} alt={`Imagen de la red ${n.code}`} loading="lazy" className="size-full object-contain" /> : <ImageIcon className="size-6 text-fur-gray-500" aria-label="Sin imagen" />}
+                </span>
+                {n.description ? <p className="mt-2 line-clamp-3 text-xs text-fur-gray-600">{n.description}</p> : <p className="mt-2 text-xs text-muted-foreground">Sin descripción</p>}
+                <p className="mt-2 text-xs text-muted-foreground">{usageText(usageById.get(n.id)) ?? ' '}</p>
                 <div className="mt-auto flex gap-1.5 pt-2">
                   <Button size="xs" variant="secondary" aria-label={`Editar ${n.name}`} onClick={() => setDialog({ kind: 'edit', row: n })}><Pencil /> Editar</Button>
                   <Button size="xs" variant="outline" aria-label={`Eliminar ${n.name}`} onClick={() => setDialog({ kind: 'delete', row: n })}><Trash2 /> Eliminar</Button>
@@ -164,10 +254,16 @@ export function MastersPage() {
                   .filter((s) => s.stageGroup === g)
                   .sort((a, b) => a.sequenceDefault - b.sequenceDefault)
                   .map((s) => (
-                    <li key={s.id} className="rounded-lg border border-border bg-fur-gray-50 p-3" style={{ borderTopColor: 'var(--fur-navy-800)', borderTopWidth: 3 }}>
+                    <li key={s.id} className="flex flex-col rounded-lg border border-border bg-fur-gray-50 p-3" style={{ borderTopColor: 'var(--fur-navy-800)', borderTopWidth: 3 }}>
                       <p className="fur-code text-[11px] text-muted-foreground">{s.code}</p>
                       <p className="font-semibold text-fur-navy-900">{s.name}</p>
-                      {s.description && <p className="mt-1 line-clamp-2 text-xs text-fur-gray-600">{s.description}</p>}
+                      <span className="mt-2 grid h-24 place-items-center overflow-hidden rounded-md border border-border bg-white">
+                        {s.layoutImageUrl ? <img src={apiUrl(s.layoutImageUrl)} alt={`Layout de la etapa ${s.code}`} loading="lazy" className="size-full object-contain" /> : <ImageIcon className="size-6 text-fur-gray-500" aria-label="Sin imagen de layout" />}
+                      </span>
+                      {s.description ? <p className="mt-2 line-clamp-3 text-xs text-fur-gray-600">{s.description}</p> : <p className="mt-2 text-xs text-muted-foreground">Sin descripción</p>}
+                      <div className="mt-auto pt-2">
+                        <Button size="xs" variant="secondary" aria-label={`Editar etapa ${s.code}`} onClick={() => setEditingStage(s)}><Pencil /> Editar</Button>
+                      </div>
                     </li>
                   ))}
               </ul>
@@ -176,6 +272,7 @@ export function MastersPage() {
         )}
       </div>
 
+      {editingStage && <StageDialog row={editingStage} onClose={() => setEditingStage(null)} />}
       {dialog?.kind === 'edit' && <NetworkDialog row={dialog.row} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'delete' && <DeleteNetworkDialog row={dialog.row} usage={usageById.get(dialog.row.id)} onClose={() => setDialog(null)} />}
     </>

@@ -3,8 +3,28 @@ import { api, formBody, jsonBody } from '@/lib/api'
 
 export type Page<T> = { items: T[]; total: number; page: number; pageSize: number }
 
-export type StageMaster = { id: string; code: string; name: string; sequenceDefault: number; description: string | null; stageGroup: string; colorToken: string | null }
-export type NetworkMaster = { id: string; code: string; name: string; description: string | null; icon: string | null; colorToken: string | null; sequence: number }
+export type StageMaster = {
+  id: string
+  code: string
+  name: string
+  sequenceDefault: number
+  description: string | null
+  stageGroup: string
+  colorToken: string | null
+  /** Ruta (relativa a la API) de la imagen del layout; usar con `apiUrl`. null = sin imagen. */
+  layoutImageUrl: string | null
+}
+export type NetworkMaster = {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  icon: string | null
+  colorToken: string | null
+  sequence: number
+  /** Ruta (relativa a la API) de la imagen de la red; usar con `apiUrl`. null = sin imagen. */
+  layoutImageUrl: string | null
+}
 export type Family = { id: string; code: string; name: string; icon: string | null }
 export type AssetType = { id: string; code: string; name: string; description: string | null; familyCode: string; familyName: string; stageCodes: string[]; networkCodes: string[] }
 export type Manufacturer = { id: string; name: string; countryCode: string | null }
@@ -76,6 +96,9 @@ export type NetworkUsage = { id: string; plants: number; assets: number; types: 
 export const useNetworkUsage = () => useQuery({ queryKey: ['catalog', 'networks', 'usage'], queryFn: () => api<NetworkUsage[]>('/networks/catalog/usage') })
 export const useCreateNetwork = () => useCatalogMutation((v: NetworkInput & { code: string }) => send<NetworkMaster>('POST', '/networks/catalog', v))
 export const useUpdateNetwork = () => useCatalogMutation(({ id, ...v }: Partial<NetworkInput> & { id: string }) => send<NetworkMaster>('PATCH', `/networks/catalog/${id}`, v))
+/** Imagen de la red (solo administrador). Reemplaza la anterior si ya había una. */
+export const useUploadNetworkImage = () => useCatalogMutation(({ id, file }: { id: string; file: File }) => api<{ id: string; layoutImageUrl: string }>(`/networks/catalog/${id}/layout`, { method: 'POST', ...formBody({}, file) }))
+export const useRemoveNetworkImage = () => useCatalogMutation((id: string) => api<void>(`/networks/catalog/${id}/layout`, { method: 'DELETE' }))
 /** `force` la quita también de las plantas que la habilitan (y desvincula sus activos). */
 export const useDeleteNetwork = () => useCatalogMutation(({ id, force }: { id: string; force: boolean }) => api<void>(`/networks/catalog/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' }))
 
@@ -124,6 +147,11 @@ export const useModelVariables = (modelId: string | undefined) =>
 /** Registra los datos del fabricante de un modelo: `{ CODIGO: valor }`, y `null` borra el valor. */
 export const useSetModelVariables = () =>
   useCatalogMutation(({ id, values }: { id: string; values: Record<string, unknown> }) => api<ModelVariable[]>(`/catalog/models/${id}/variables`, { method: 'PUT', ...jsonBody({ values }) }))
+
+/** Etapas (D01–D19): el código y el nombre son fijos; el administrador edita la descripción y la imagen del layout. */
+export const useUpdateStage = () => useCatalogMutation(({ id, description }: { id: string; description: string | null }) => send<StageMaster>('PATCH', `/stages/catalog/${id}`, { description }))
+export const useUploadStageLayout = () => useCatalogMutation(({ id, file }: { id: string; file: File }) => api<{ id: string; layoutImageUrl: string }>(`/stages/catalog/${id}/layout`, { method: 'POST', ...formBody({}, file) }))
+export const useRemoveStageLayout = () => useCatalogMutation((id: string) => api<void>(`/stages/catalog/${id}/layout`, { method: 'DELETE' }))
 
 /** Foto del modelo (solo administrador). Reemplaza la anterior si ya había una. */
 export const useUploadModelImage = () => useCatalogMutation(({ id, file }: { id: string; file: File }) => api<{ id: string; imageUrl: string }>(`/catalog/models/${id}/image`, { method: 'POST', ...formBody({}, file) }))

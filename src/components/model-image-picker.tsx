@@ -12,7 +12,25 @@ export type ImageChange = { file: File | null; remove: boolean }
  * Selector de la foto de un modelo: muestra la actual (si la hay), permite elegir otra, ver cómo quedará y quitarla.
  * No sube nada: entrega el cambio a quien lo usa, que lo envía al guardar el modelo.
  */
-export function ModelImagePicker({ currentUrl, value, onChange }: { currentUrl: string | null; value: ImageChange; onChange: (v: ImageChange) => void }) {
+export function ModelImagePicker({
+  currentUrl,
+  value,
+  onChange,
+  title = 'Foto del modelo',
+  noun = 'foto',
+  subject = 'modelo',
+  wide = false,
+}: {
+  currentUrl: string | null
+  value: ImageChange
+  onChange: (v: ImageChange) => void
+  /** Etiquetas: por defecto las de la foto de un modelo. */
+  title?: string
+  noun?: string
+  subject?: string
+  /** Vista previa grande y apaisada (para diagramas y layouts). */
+  wide?: boolean
+}) {
   const input = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -41,28 +59,28 @@ export function ModelImagePicker({ currentUrl, value, onChange }: { currentUrl: 
 
   return (
     <div className="space-y-2 sm:col-span-2">
-      <p className="text-sm font-medium">Foto del modelo</p>
+      <p className="text-sm font-medium">{title}</p>
       <div className="flex items-center gap-4 rounded-lg border border-dashed border-border bg-fur-gray-50 p-3">
-        <div className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-white">
-          {shown ? <img src={shown} alt="Foto del modelo" className="size-full object-contain" /> : <ImagePlus className="size-7 text-fur-gray-500" aria-hidden />}
+        <div className={`grid shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-white ${wide ? 'h-28 w-44' : 'size-24'}`}>
+          {shown ? <img src={shown} alt={title} className="size-full object-contain" /> : <ImagePlus className="size-7 text-fur-gray-500" aria-hidden />}
         </div>
         <div className="min-w-0 flex-1 space-y-2">
           <p className="text-xs text-muted-foreground">
-            {value.file ? `Se subirá «${value.file.name}» al guardar.` : value.remove ? 'La foto actual se quitará al guardar.' : currentUrl ? 'Foto actual del modelo.' : 'Este modelo aún no tiene foto.'} PNG, JPG o WebP, hasta 5 MB.
+            {value.file ? `Se subirá «${value.file.name}» al guardar.` : value.remove ? `La ${noun} actual se quitará al guardar.` : currentUrl ? `${noun[0].toUpperCase()}${noun.slice(1)} actual de${subject === 'modelo' ? 'l' : ' la'} ${subject}.` : `${subject === 'modelo' ? 'Este' : 'Esta'} ${subject} aún no tiene ${noun}.`} PNG, JPG o WebP, hasta 5 MB.
           </p>
           <div className="flex flex-wrap gap-2">
-            <input ref={input} type="file" accept={ACCEPT} className="sr-only" aria-label="Elegir foto del modelo" onChange={(e) => pick(e.target.files?.[0])} />
+            <input ref={input} type="file" accept={ACCEPT} className="sr-only" aria-label={`Elegir ${noun} de${subject === 'modelo' ? 'l' : ' la'} ${subject}`} onChange={(e) => pick(e.target.files?.[0])} />
             <Button type="button" size="xs" variant="secondary" onClick={() => input.current?.click()}>
-              <ImagePlus /> {currentUrl || value.file ? 'Cambiar foto' : 'Elegir foto'}
+              <ImagePlus /> {currentUrl || value.file ? `Cambiar ${noun}` : `Elegir ${noun}`}
             </Button>
             {(value.file || (currentUrl && !value.remove)) && (
               <Button type="button" size="xs" variant="outline" onClick={discard}>
-                <Trash2 /> {value.file && currentUrl ? 'Descartar y quitar' : value.file ? 'Descartar' : 'Quitar foto'}
+                <Trash2 /> {value.file && currentUrl ? 'Descartar y quitar' : value.file ? 'Descartar' : `Quitar ${noun}`}
               </Button>
             )}
             {value.remove && currentUrl && (
               <Button type="button" size="xs" variant="outline" onClick={() => onChange({ file: null, remove: false })}>
-                <Undo2 /> Conservar foto actual
+                <Undo2 /> Conservar {noun} actual
               </Button>
             )}
           </div>
