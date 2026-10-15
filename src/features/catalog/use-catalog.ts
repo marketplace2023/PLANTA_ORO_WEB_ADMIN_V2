@@ -149,7 +149,15 @@ export const useSetModelVariables = () =>
   useCatalogMutation(({ id, values }: { id: string; values: Record<string, unknown> }) => api<ModelVariable[]>(`/catalog/models/${id}/variables`, { method: 'PUT', ...jsonBody({ values }) }))
 
 /** Etapas (D01–D19): el código y el nombre son fijos; el administrador edita la descripción y la imagen del layout. */
-export const useUpdateStage = () => useCatalogMutation(({ id, description }: { id: string; description: string | null }) => send<StageMaster>('PATCH', `/stages/catalog/${id}`, { description }))
+export type StageInput = { name: string; stageGroup: string; colorToken: string | null; description: string | null; sequenceDefault: number }
+/** Dónde se usa cada etapa (plantas que la habilitan, activos asignados y tipos del catálogo). */
+export type StageUsage = { id: string; plants: number; assets: number; types: number }
+export const useStageUsage = () => useQuery({ queryKey: ['catalog', 'stages', 'usage'], queryFn: () => api<StageUsage[]>('/stages/catalog/usage') })
+export const useCreateStage = () =>
+  useCatalogMutation((v: { code: string; name: string; stageGroup: string; colorToken?: string; description?: string; sequenceDefault?: number }) => send<StageMaster>('POST', '/stages/catalog', v))
+export const useUpdateStage = () => useCatalogMutation(({ id, ...v }: Partial<StageInput> & { id: string }) => send<StageMaster>('PATCH', `/stages/catalog/${id}`, v))
+/** `force` la quita también de las plantas que la habilitan (y deja sin etapa a sus activos). */
+export const useDeleteStage = () => useCatalogMutation(({ id, force }: { id: string; force: boolean }) => api<void>(`/stages/catalog/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' }))
 export const useUploadStageLayout = () => useCatalogMutation(({ id, file }: { id: string; file: File }) => api<{ id: string; layoutImageUrl: string }>(`/stages/catalog/${id}/layout`, { method: 'POST', ...formBody({}, file) }))
 export const useRemoveStageLayout = () => useCatalogMutation((id: string) => api<void>(`/stages/catalog/${id}/layout`, { method: 'DELETE' }))
 
