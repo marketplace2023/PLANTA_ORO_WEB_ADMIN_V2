@@ -47,8 +47,8 @@ export function FormDialog({
   submitLabel?: string
   busy?: boolean
   error?: string | null
-  /** Contenido adicional dentro del formulario, tras los campos (p. ej. un selector de archivo). */
-  extra?: React.ReactNode
+  /** Contenido adicional dentro del formulario, tras los campos (p. ej. un selector de archivo). Puede depender de los valores. */
+  extra?: React.ReactNode | ((values: Values) => React.ReactNode)
   onClose: () => void
   onSubmit: (values: Values) => void
 }) {
@@ -107,7 +107,7 @@ export function FormDialog({
               )
             })}
           </div>
-          {extra}
+          {typeof extra === 'function' ? extra(values) : extra}
           {error && (
             <p role="alert" className="rounded-lg border border-fur-red-500/40 bg-fur-red-500/10 px-3 py-2 text-sm text-fur-red-500">
               {error}

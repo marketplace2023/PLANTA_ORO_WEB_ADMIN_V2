@@ -35,6 +35,10 @@ export type Model = {
   specifications: Record<string, unknown>
   /** Ruta (relativa a la API) de la foto del modelo; usar con `apiUrl`. null = sin foto. */
   imageUrl: string | null
+  /** Etapas donde el modelo participa realmente (las que declaró o, si no, todas las de su tipo). */
+  stageCodes: string[]
+  /** `true` si no declaró etapas propias y hereda las del tipo. */
+  stageInherited: boolean
   type: { id: string; code: string; name: string }
   family: { id: string; code: string; name: string; icon: string | null }
   manufacturer: Manufacturer | null
@@ -78,8 +82,8 @@ export const useCreateType = () => useCatalogMutation((v: { familyCode: string; 
 export const useUpdateType = () => useCatalogMutation(({ id, ...v }: { id: string; name?: string; familyCode?: string; description?: string | null; stageCodes?: string[]; networkCodes?: string[] }) => send('PATCH', `/catalog/types/${id}`, v))
 export const useCreateManufacturer = () => useCatalogMutation((v: { name: string; countryCode?: string; website?: string }) => send('POST', '/catalog/manufacturers', v))
 export const useUpdateManufacturer = () => useCatalogMutation(({ id, ...v }: { id: string; name?: string; countryCode?: string | null; website?: string | null }) => send('PATCH', `/catalog/manufacturers/${id}`, v))
-export const useCreateModel = () => useCatalogMutation((v: { typeCode: string; manufacturerId?: string; modelName: string }) => send<{ id: string }>('POST', '/catalog/models', v))
-export const useUpdateModel = () => useCatalogMutation(({ id, ...v }: { id: string; modelName?: string; manufacturerId?: string | null; status?: 'ACTIVE' | 'INACTIVE' }) => send('PATCH', `/catalog/models/${id}`, v))
+export const useCreateModel = () => useCatalogMutation((v: { typeCode: string; manufacturerId?: string; modelName: string; stageCodes?: string[] }) => send<{ id: string }>('POST', '/catalog/models', v))
+export const useUpdateModel = () => useCatalogMutation(({ id, ...v }: { id: string; modelName?: string; manufacturerId?: string | null; status?: 'ACTIVE' | 'INACTIVE'; stageCodes?: string[] }) => send('PATCH', `/catalog/models/${id}`, v))
 
 /** Eliminar del catálogo: la API lo rechaza (409) con el motivo si algo lo usa (activos, modelos, tipos…). */
 const remove = (kind: 'families' | 'types' | 'manufacturers' | 'models') => (id: string) => api<void>(`/catalog/${kind}/${id}`, { method: 'DELETE' })

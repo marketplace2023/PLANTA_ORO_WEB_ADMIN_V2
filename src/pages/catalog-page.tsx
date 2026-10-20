@@ -141,7 +141,7 @@ function TypeDialog({ row, onClose }: { row?: AssetType; onClose: () => void }) 
       error={errorMessage(m.error)}
       extra={
         <>
-          <CheckGroup legend="Etapas del proceso donde se usa" options={(stages.data ?? []).map((s) => ({ value: s.code, label: `${s.code} · ${s.name}` }))} value={stageCodes} onChange={setStageCodes} help="Así aparece el tipo al filtrar el catálogo por etapa." />
+          <CheckGroup legend="Etapas del proceso posibles" options={(stages.data ?? []).map((s) => ({ value: s.code, label: `${s.code} · ${s.name}` }))} value={stageCodes} onChange={setStageCodes} help="Son las etapas posibles para los modelos de este tipo: cada modelo elige en cuáles participa realmente." />
           <CheckGroup legend="Redes transversales" options={(networks.data ?? []).map((n) => ({ value: n.code, label: n.name }))} value={networkCodes} onChange={setNetworkCodes} help="Así aparece el tipo al filtrar el catálogo por red transversal." />
         </>
       }
@@ -269,7 +269,16 @@ function ModelsTab() {
   const q = useModels({ search: useDebouncedValue(search.trim()) || undefined, family: family || undefined, status, page })
   const [form, setForm] = useState<{ row?: Model } | null>(null)
   const [variablesOf, setVariablesOf] = useState<Model | null>(null)
+  const stageMasters = useStageMasters()
+  /** Etapas elegidas para el modelo, con el tipo al que corresponden (al cambiar de tipo se vuelve a empezar). */
+  const [stageSel, setStageSel] = useState<{ typeCode: string; codes: string[] } | null>(null)
   const editing = form?.row
+  const stageName = (code: string) => stageMasters.data?.find((x) => x.code === code)?.name
+  /** Etapas posibles del tipo y las que quedan marcadas: las del modelo, o todas las posibles mientras no declare otras. */
+  const stagesFor = (typeCode: string) => {
+    const possible = types.data?.find((t) => t.code === typeCode)?.stageCodes ?? []
+    return { possible, selected: stageSel && stageSel.typeCode === typeCode ? stageSel.codes.filter((c) => possible.includes(c)) : possible }
+  }
   const mfOptions = (manufacturers.data ?? []).map((f) => ({ value: f.id, label: f.name }))
   const fields: Field[] = editing
     ? [
@@ -289,9 +298,9 @@ function ModelsTab() {
     try {
       let id = editing?.id
       if (editing) {
-        await update.mutateAsync({ id: editing.id, modelName: String(v.modelName).trim(), manufacturerId: nul(v.manufacturerId), status: v.status as 'ACTIVE' | 'INACTIVE' })
+        await update.mutateAsync({ id: editing.id, modelName: String(v.modelName).trim(), manufacturerId: nul(v.manufacturerId), status: v.status as 'ACTIVE' | 'INACTIVE', stageCodes: stagesFor(editing.type.code).selected })
       } else {
-        id = (await create.mutateAsync({ typeCode: String(v.typeCode), modelName: String(v.modelName).trim(), manufacturerId: opt(v.manufacturerId) })).id
+        id = (await create.mutateAsync({ typeCode: String(v.typeCode), modelName: String(v.modelName).trim(), manufacturerId: opt(v.manufacturerId), stageCodes: stagesFor(String(v.typeCode)).selected })).id
       }
       try {
         if (id && image.file) await uploadImage.mutateAsync({ id, file: image.file })
@@ -328,10 +337,10 @@ function ModelsTab() {
           <option value="INACTIVE">Inactivos</option>
         </select>
       </div>
-      <Section title="Modelos" subtitle="Describen qué existe; los activos de cada planta se crean a partir de un modelo." addLabel="Nuevo modelo" onAdd={() => { setImage({ file: null, remove: false }); setSaveError(null); setForm({}) }}>
+      <Section title="Modelos" subtitle="Describen qué existe; los activos de cada planta se crean a partir de un modelo." addLabel="Nuevo modelo" onAdd={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel(null); setForm({}) }}>
         {q.isLoading ? <div className="p-4"><Loading rows={6} /></div> : q.isError ? <Failed what="los modelos" onRetry={() => void q.refetch()} /> : q.data && q.data.items.length > 0 ? (
           <>
-            <DataTable head={['Foto', 'Modelo', 'Tipo', 'Familia', 'Fabricante', 'Estado', { label: '', right: true }]}>
+            <DataTable head={['Foto', 'Modelo', 'Tipo', 'Etapas', 'Familia', 'Fabricante', 'Estado', { label: '', right: true }]}>
               {q.data.items.map((r) => (
                 <tr key={r.id} className={r.status === 'INACTIVE' ? 'opacity-60' : undefined}>
                   <td className={td}>
@@ -341,13 +350,23 @@ function ModelsTab() {
                   </td>
                   <td className={`${td} font-medium text-fur-navy-900`}>{r.modelName}</td>
                   <td className={td}>{r.type.name}</td>
+                  <td className={td}>
+                    {r.stageCodes.length === 0 ? (
+                      '—'
+                    ) : (
+                      <span className="fur-code text-xs" title={r.stageCodes.map((c) => `${c} · ${stageName(c) ?? ''}`).join('\n')}>
+                        {r.stageCodes.length > 4 ? `${r.stageCodes.slice(0, 4).join(', ')} +${r.stageCodes.length - 4}` : r.stageCodes.join(', ')}
+                        {r.stageInherited && <span className="ml-1 font-sans text-[10px] text-muted-foreground">(del tipo)</span>}
+                      </span>
+                    )}
+                  </td>
                   <td className={td}>{r.family.name}</td>
                   <td className={td}>{r.manufacturer?.name ?? '—'}</td>
                   <td className={td}><Pill label={r.status === 'ACTIVE' ? 'Activo' : 'Inactivo'} color={r.status === 'ACTIVE' ? 'var(--fur-green-500)' : 'var(--fur-steel-500)'} /></td>
                   <td className={`${td} text-right`}>
                     <div className="flex justify-end gap-1.5">
                       <Button size="xs" variant="outline" aria-label={`Datos del fabricante de ${r.modelName}`} onClick={() => setVariablesOf(r)}><ListChecks /> Datos del fabricante</Button>
-                      <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setForm({ row: r }) }}><Pencil /> Editar</Button>
+                      <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel({ typeCode: r.type.code, codes: r.stageCodes }); setForm({ row: r }) }}><Pencil /> Editar</Button>
                       <Button size="xs" variant="outline" aria-label={`Eliminar ${r.modelName}`} onClick={() => { del.reset(); setRemoving(r) }}><Trash2 /> Eliminar</Button>
                     </div>
                   </td>
@@ -382,7 +401,27 @@ function ModelsTab() {
           initial={editing ? { modelName: editing.modelName, manufacturerId: editing.manufacturer?.id ?? '', status: editing.status } : {}}
           busy={saving}
           error={saveError}
-          extra={<ModelImagePicker currentUrl={editing?.imageUrl ?? null} value={image} onChange={setImage} />}
+          extra={(v) => {
+            const typeCode = editing ? editing.type.code : String(v.typeCode ?? '')
+            const { possible, selected } = stagesFor(typeCode)
+            return (
+              <>
+                {typeCode !== '' &&
+                  (possible.length > 0 ? (
+                    <CheckGroup
+                      legend="Etapas del proceso donde participa"
+                      options={possible.map((c) => ({ value: c, label: `${c} · ${stageName(c) ?? ''}` }))}
+                      value={selected}
+                      onChange={(codes) => setStageSel({ typeCode, codes })}
+                      help={selected.length === possible.length ? 'Se muestran las etapas posibles del tipo. Todas marcadas = hereda las del tipo: si el tipo agrega etapas, este modelo también las tendrá.' : 'Solo participa en las marcadas: así aparece al filtrar el catálogo por etapa.'}
+                    />
+                  ) : (
+                    <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">El tipo aún no tiene etapas posibles. Agrégalas en la pestaña «Tipos» para poder elegir en cuáles participa este modelo.</p>
+                  ))}
+                <ModelImagePicker currentUrl={editing?.imageUrl ?? null} value={image} onChange={setImage} />
+              </>
+            )
+          }}
           onClose={() => setForm(null)}
           onSubmit={(v) => void submit(v)}
         />
