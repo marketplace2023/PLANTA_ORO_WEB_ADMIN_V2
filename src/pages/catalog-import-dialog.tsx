@@ -44,6 +44,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
           <div role="status" className="space-y-3 py-4">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-fur-green-600"><CheckCircle2 /> Importación completada</h2>
             <p>{result.summary.models.create} modelos creados y {result.summary.models.update} actualizados. {result.summary.specifications} especificaciones asignadas por TAG.</p>
+            {result.summary.manufacturers.merged > 0 && <p>{result.summary.manufacturers.merged} variantes de fabricantes unificadas.</p>}
             <p className="text-sm text-muted-foreground">Los modelos ya están disponibles en el catálogo y sus fichas.</p>
           </div>
         ) : (
@@ -80,6 +81,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
                     ))}</tbody>
                   </table>
                 </div>
+                <p className="text-xs text-muted-foreground">Los fabricantes usan solo el nombre fuera de paréntesis. {preview.summary.manufacturers.merged > 0 ? `Se unificarán ${preview.summary.manufacturers.merged} variantes existentes conservando sus modelos y activos asociados.` : 'Las notas entre paréntesis no crean fabricantes diferentes.'}</p>
                 <p className="text-xs text-muted-foreground">Las especificaciones y los componentes de los TAG del archivo se reemplazan con lo revisado aquí. Las fotos existentes se conservan. Las redes de los tipos incluidos quedarán solo en Procesos.</p>
                 <div className="max-h-64 overflow-auto rounded-md border border-border">
                   <table className="w-full text-left text-xs">

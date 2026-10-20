@@ -66,7 +66,7 @@ export const useHealth = () => useQuery({ queryKey: ['health'], queryFn: () => a
 export type CatalogImportPreview = {
   fingerprint: string
   issues: Array<{ sheet: string; row: number; message: string }>
-  summary: { models: ImportCounts; families: ImportCounts; types: ImportCounts; manufacturers: ImportCounts; specifications: number }
+  summary: { models: ImportCounts; families: ImportCounts; types: ImportCounts; manufacturers: ImportCounts & { merged: number }; specifications: number }
   rows: Array<{ tag: string; name: string; family: string; type: string; manufacturer: string; stages: string[]; components: string[]; specifications: Record<string, string>; action: 'create' | 'update' }>
 }
 type ImportCounts = { create: number; update: number }
