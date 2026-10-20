@@ -31,6 +31,7 @@ export type Manufacturer = { id: string; name: string; countryCode: string | nul
 export type Model = {
   id: string
   modelName: string
+  catalogTag: string | null
   status: 'ACTIVE' | 'INACTIVE'
   specifications: Record<string, unknown>
   /** Ruta (relativa a la API) de la foto del modelo; usar con `apiUrl`. null = sin foto. */
@@ -61,6 +62,17 @@ export const useModels = (filters: { search?: string; family?: string; status?: 
     placeholderData: keepPreviousData,
   })
 export const useHealth = () => useQuery({ queryKey: ['health'], queryFn: () => api<HealthStatus>('/health'), refetchInterval: 30_000, retry: false })
+
+export type CatalogImportPreview = {
+  fingerprint: string
+  issues: Array<{ sheet: string; row: number; message: string }>
+  summary: { models: ImportCounts; families: ImportCounts; types: ImportCounts; manufacturers: ImportCounts & { merged: number }; specifications: number }
+  rows: Array<{ tag: string; name: string; family: string; type: string; manufacturer: string; stages: string[]; components: string[]; specifications: Record<string, string>; action: 'create' | 'update' }>
+}
+type ImportCounts = { create: number; update: number }
+export type CatalogImportResult = CatalogImportPreview & { imported: number }
+export const usePreviewCatalogImport = () => useMutation({ mutationFn: (file: File) => api<CatalogImportPreview>('/catalog/imports/preview', { method: 'POST', ...formBody({}, file) }) })
+export const useApplyCatalogImport = () => useCatalogMutation(({ file, fingerprint }: { file: File; fingerprint: string }) => api<CatalogImportResult>('/catalog/imports', { method: 'POST', ...formBody({ fingerprint }, file) }))
 
 /** Cualquier cambio del catálogo invalida lo que cuelga de ['catalog'] y los totales del dashboard. */
 function useCatalogMutation<V, T = unknown>(fn: (v: V) => Promise<T>) {

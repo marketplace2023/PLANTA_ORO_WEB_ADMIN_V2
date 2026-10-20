@@ -1,4 +1,4 @@
-import { ImageIcon, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { FileSpreadsheet, ImageIcon, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { CheckGroup } from '@/components/check-group'
@@ -39,6 +39,7 @@ import {
 import { cn } from '@/lib/utils'
 import { apiUrl } from '@/lib/api'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
+import { CatalogImportDialog } from '@/pages/catalog-import-dialog'
 
 type Tab = 'families' | 'types' | 'manufacturers' | 'models' | 'variables'
 
@@ -340,7 +341,7 @@ function ModelsTab() {
       <Section title="Modelos" subtitle="Describen qué existe; los activos de cada planta se crean a partir de un modelo." addLabel="Nuevo modelo" onAdd={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel(null); setForm({}) }}>
         {q.isLoading ? <div className="p-4"><Loading rows={6} /></div> : q.isError ? <Failed what="los modelos" onRetry={() => void q.refetch()} /> : q.data && q.data.items.length > 0 ? (
           <>
-            <DataTable head={['Foto', 'Modelo', 'Tipo', 'Etapas', 'Familia', 'Fabricante', 'Estado', { label: '', right: true }]}>
+            <DataTable head={['Foto', 'TAG / Modelo', 'Tipo', 'Etapas', 'Familia', 'Fabricante', 'Estado', { label: '', right: true }]}>
               {q.data.items.map((r) => (
                 <tr key={r.id} className={r.status === 'INACTIVE' ? 'opacity-60' : undefined}>
                   <td className={td}>
@@ -348,7 +349,7 @@ function ModelsTab() {
                       {r.imageUrl ? <img src={apiUrl(r.imageUrl)} alt={`Foto de ${r.modelName}`} loading="lazy" className="size-full object-contain" /> : <ImageIcon className="size-5 text-fur-gray-500" aria-label="Sin foto" />}
                     </span>
                   </td>
-                  <td className={`${td} font-medium text-fur-navy-900`}>{r.modelName}</td>
+                  <td className={`${td} font-medium text-fur-navy-900`}>{r.catalogTag && <div className="fur-code mb-1 text-xs text-muted-foreground">{r.catalogTag}</div>}{r.modelName}</td>
                   <td className={td}>{r.type.name}</td>
                   <td className={td}>
                     {r.stageCodes.length === 0 ? (
@@ -432,9 +433,12 @@ function ModelsTab() {
 
 export function CatalogPage() {
   const [tab, setTab] = useState<Tab>('models')
+  const [importing, setImporting] = useState(false)
   return (
     <>
-      <ScreenHeader title="Catálogo de activos" description="Catálogo maestro global: describe qué existe, no qué posee cada planta. Los códigos son inmutables." />
+      <ScreenHeader title="Catálogo de activos" description="Catálogo maestro global: describe qué existe, no qué posee cada planta. Los códigos son inmutables."
+        actions={<Button variant="outline" onClick={() => setImporting(true)}><FileSpreadsheet /> Importar Excel</Button>} />
+      {importing && <CatalogImportDialog onClose={() => setImporting(false)} onImported={() => setTab('models')} />}
       <Segmented<Tab>
         label="Catálogo"
         value={tab}
