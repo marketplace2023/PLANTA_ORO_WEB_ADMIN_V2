@@ -67,14 +67,15 @@ export const useHealth = () => useQuery({ queryKey: ['health'], queryFn: () => a
 
 export type CatalogImportPreview = {
   fingerprint: string
-  issues: Array<{ sheet: string; row: number; message: string }>
+  networks: Array<{ code: string; name: string }>
+  issues: Array<{ sheet: string; row: number; message: string; code?: 'MISSING_SPECIFICATIONS' }>
   summary: { models: ImportCounts; families: ImportCounts; types: ImportCounts; manufacturers: ImportCounts & { merged: number }; specifications: number }
   rows: Array<{ tag: string; name: string; family: string; type: string; manufacturer: string; stages: string[]; components: string[]; specifications: Record<string, string>; action: 'create' | 'update' }>
 }
 type ImportCounts = { create: number; update: number }
 export type CatalogImportResult = CatalogImportPreview & { imported: number }
-export const usePreviewCatalogImport = () => useMutation({ mutationFn: (file: File) => api<CatalogImportPreview>('/catalog/imports/preview', { method: 'POST', ...formBody({}, file) }) })
-export const useApplyCatalogImport = () => useCatalogMutation(({ file, fingerprint }: { file: File; fingerprint: string }) => api<CatalogImportResult>('/catalog/imports', { method: 'POST', ...formBody({ fingerprint }, file) }))
+export const usePreviewCatalogImport = () => useMutation({ mutationFn: ({ file, networkCodes }: { file: File; networkCodes: string[] }) => api<CatalogImportPreview>('/catalog/imports/preview', { method: 'POST', ...formBody({ networkCodes: JSON.stringify(networkCodes) }, file) }) })
+export const useApplyCatalogImport = () => useCatalogMutation(({ file, fingerprint, networkCodes, allowMissingSpecifications = false }: { file: File; fingerprint: string; networkCodes: string[]; allowMissingSpecifications?: boolean }) => api<CatalogImportResult>('/catalog/imports', { method: 'POST', ...formBody({ fingerprint, networkCodes: JSON.stringify(networkCodes), allowMissingSpecifications: String(allowMissingSpecifications) }, file) }))
 
 /** Cualquier cambio del catálogo invalida lo que cuelga de ['catalog'] y los totales del dashboard. */
 function useCatalogMutation<V, T = unknown>(fn: (v: V) => Promise<T>) {
