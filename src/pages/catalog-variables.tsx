@@ -423,7 +423,7 @@ export function ModelVariablesDialog({ model, onClose }: { model: Model; onClose
           <DialogHeader>
             <DialogTitle>Datos del fabricante · {model.modelName}</DialogTitle>
             <DialogDescription>
-              No hay variables que apliquen a este modelo. Crea una en la pestaña Variables (déjala sin marcar para que aplique a todos los equipos) o asígnale las redes y etapas de este tipo.
+              No hay variables que apliquen a este modelo. Crea una en la pestaña Variables (déjala sin marcar para que aplique a todos los equipos) o asigna al modelo las redes correspondientes y revisa sus etapas.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

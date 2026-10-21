@@ -82,7 +82,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
                   </table>
                 </div>
                 <p className="text-xs text-muted-foreground">Los fabricantes usan solo el nombre fuera de paréntesis. {preview.summary.manufacturers.merged > 0 ? `Se unificarán ${preview.summary.manufacturers.merged} variantes existentes conservando sus modelos y activos asociados.` : 'Las notas entre paréntesis no crean fabricantes diferentes.'}</p>
-                <p className="text-xs text-muted-foreground">Las especificaciones y los componentes de los TAG del archivo se reemplazan con lo revisado aquí. Las fotos existentes se conservan. Las redes de los tipos incluidos quedarán solo en Procesos.</p>
+                <p className="text-xs text-muted-foreground">Las especificaciones y los componentes de los TAG del archivo se reemplazan con lo revisado aquí. Las fotos existentes se conservan. Las redes de los modelos incluidos quedarán solo en Procesos.</p>
                 <div className="max-h-64 overflow-auto rounded-md border border-border">
                   <table className="w-full text-left text-xs">
                     <thead className="sticky top-0 bg-muted"><tr>{['TAG / modelo', 'Familia / tipo', 'Fabricante', 'Etapa', 'Acción'].map(h => <th className="px-3 py-2" key={h}>{h}</th>)}</tr></thead>
