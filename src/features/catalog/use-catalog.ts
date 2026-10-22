@@ -26,7 +26,7 @@ export type NetworkMaster = {
   layoutImageUrl: string | null
 }
 export type Family = { id: string; code: string; name: string; icon: string | null }
-export type AssetType = { id: string; code: string; name: string; description: string | null; familyCode: string; familyName: string; stageCodes: string[]; networkCodes: string[] }
+export type AssetType = { id: string; code: string; name: string; description: string | null; familyCode: string; familyName: string; stageCodes: string[] }
 export type Manufacturer = { id: string; name: string; countryCode: string | null }
 export type Model = {
   id: string
@@ -40,6 +40,8 @@ export type Model = {
   stageCodes: string[]
   /** `true` si no declaró etapas propias y hereda las del tipo. */
   stageInherited: boolean
+  /** Redes propias del modelo, sin herencia del tipo. */
+  networkCodes: string[]
   type: { id: string; code: string; name: string }
   family: { id: string; code: string; name: string; icon: string | null }
   manufacturer: Manufacturer | null
@@ -65,14 +67,25 @@ export const useHealth = () => useQuery({ queryKey: ['health'], queryFn: () => a
 
 export type CatalogImportPreview = {
   fingerprint: string
-  issues: Array<{ sheet: string; row: number; message: string }>
+  networks: Array<{ code: string; name: string }>
+  issues: Array<{ sheet: string; row: number; message: string; code?: 'MISSING_SPECIFICATIONS' }>
   summary: { models: ImportCounts; families: ImportCounts; types: ImportCounts; manufacturers: ImportCounts & { merged: number }; specifications: number }
   rows: Array<{ tag: string; name: string; family: string; type: string; manufacturer: string; stages: string[]; components: string[]; specifications: Record<string, string>; action: 'create' | 'update' }>
 }
 type ImportCounts = { create: number; update: number }
 export type CatalogImportResult = CatalogImportPreview & { imported: number }
-export const usePreviewCatalogImport = () => useMutation({ mutationFn: (file: File) => api<CatalogImportPreview>('/catalog/imports/preview', { method: 'POST', ...formBody({}, file) }) })
-export const useApplyCatalogImport = () => useCatalogMutation(({ file, fingerprint }: { file: File; fingerprint: string }) => api<CatalogImportResult>('/catalog/imports', { method: 'POST', ...formBody({ fingerprint }, file) }))
+export const usePreviewCatalogImport = () => useMutation({ mutationFn: ({ file, networkCodes }: { file: File; networkCodes: string[] }) => api<CatalogImportPreview>('/catalog/imports/preview', { method: 'POST', ...formBody({ networkCodes: JSON.stringify(networkCodes) }, file) }) })
+export const useApplyCatalogImport = () => useCatalogMutation(({ file, fingerprint, networkCodes, allowMissingSpecifications = false }: { file: File; fingerprint: string; networkCodes: string[]; allowMissingSpecifications?: boolean }) => api<CatalogImportResult>('/catalog/imports', { method: 'POST', ...formBody({ fingerprint, networkCodes: JSON.stringify(networkCodes), allowMissingSpecifications: String(allowMissingSpecifications) }, file) }))
+
+export type CatalogDeletePreview = {
+  fingerprint: string
+  issues: Array<{ sheet: string; row: number; message: string }>
+  summary: { listed: number; found: number; missing: number; blocked: number; deletable: number; unlinkedListings: number }
+  rows: Array<{ tag: string; row: number; modelId: string | null; modelName: string | null; family: string | null; type: string | null; state: 'DELETE' | 'NOT_FOUND' | 'BLOCKED'; assets: number; inventoryItems: number; listings: number }>
+}
+export type CatalogDeleteResult = CatalogDeletePreview & { deleted: number }
+export const usePreviewCatalogDelete = () => useMutation({ mutationFn: (file: File) => api<CatalogDeletePreview>('/catalog/deletions/preview', { method: 'POST', ...formBody({}, file) }) })
+export const useApplyCatalogDelete = () => useCatalogMutation(({ file, fingerprint, confirm }: { file: File; fingerprint: string; confirm: string }) => api<CatalogDeleteResult>('/catalog/deletions', { method: 'POST', ...formBody({ fingerprint, confirm }, file) }))
 
 /** Cualquier cambio del catálogo invalida lo que cuelga de ['catalog'] y los totales del dashboard. */
 function useCatalogMutation<V, T = unknown>(fn: (v: V) => Promise<T>) {
@@ -90,12 +103,12 @@ const send = <T = unknown>(method: 'POST' | 'PATCH', path: string, body: unknown
 
 export const useCreateFamily = () => useCatalogMutation((v: { code: string; name: string; description?: string; icon?: string }) => send('POST', '/catalog/families', v))
 export const useUpdateFamily = () => useCatalogMutation(({ id, ...v }: { id: string; name?: string; description?: string | null; icon?: string | null }) => send('PATCH', `/catalog/families/${id}`, v))
-export const useCreateType = () => useCatalogMutation((v: { familyCode: string; code: string; name: string; description?: string; stageCodes?: string[]; networkCodes?: string[] }) => send('POST', '/catalog/types', v))
-export const useUpdateType = () => useCatalogMutation(({ id, ...v }: { id: string; name?: string; familyCode?: string; description?: string | null; stageCodes?: string[]; networkCodes?: string[] }) => send('PATCH', `/catalog/types/${id}`, v))
+export const useCreateType = () => useCatalogMutation((v: { familyCode: string; code: string; name: string; description?: string; stageCodes?: string[] }) => send('POST', '/catalog/types', v))
+export const useUpdateType = () => useCatalogMutation(({ id, ...v }: { id: string; name?: string; familyCode?: string; description?: string | null; stageCodes?: string[] }) => send('PATCH', `/catalog/types/${id}`, v))
 export const useCreateManufacturer = () => useCatalogMutation((v: { name: string; countryCode?: string; website?: string }) => send('POST', '/catalog/manufacturers', v))
 export const useUpdateManufacturer = () => useCatalogMutation(({ id, ...v }: { id: string; name?: string; countryCode?: string | null; website?: string | null }) => send('PATCH', `/catalog/manufacturers/${id}`, v))
-export const useCreateModel = () => useCatalogMutation((v: { typeCode: string; manufacturerId?: string; modelName: string; stageCodes?: string[] }) => send<{ id: string }>('POST', '/catalog/models', v))
-export const useUpdateModel = () => useCatalogMutation(({ id, ...v }: { id: string; modelName?: string; manufacturerId?: string | null; status?: 'ACTIVE' | 'INACTIVE'; stageCodes?: string[] }) => send('PATCH', `/catalog/models/${id}`, v))
+export const useCreateModel = () => useCatalogMutation((v: { typeCode: string; manufacturerId?: string; modelName: string; stageCodes?: string[]; networkCodes?: string[] }) => send<{ id: string }>('POST', '/catalog/models', v))
+export const useUpdateModel = () => useCatalogMutation(({ id, ...v }: { id: string; modelName?: string; manufacturerId?: string | null; status?: 'ACTIVE' | 'INACTIVE'; stageCodes?: string[]; networkCodes?: string[] }) => send('PATCH', `/catalog/models/${id}`, v))
 
 /** Eliminar del catálogo: la API lo rechaza (409) con el motivo si algo lo usa (activos, modelos, tipos…). */
 const remove = (kind: 'families' | 'types' | 'manufacturers' | 'models') => (id: string) => api<void>(`/catalog/${kind}/${id}`, { method: 'DELETE' })
@@ -106,9 +119,9 @@ export const useDeleteModel = () => useCatalogMutation(remove('models'))
 
 /** Redes transversales: el administrador las crea, edita y elimina (el código no cambia). */
 export type NetworkInput = { name: string; description?: string | null; icon?: string | null; colorToken?: string | null; sequence?: number }
-export type NetworkUsage = { id: string; plants: number; assets: number; types: number }
+export type NetworkUsage = { id: string; plants: number; assets: number; models: number }
 
-/** Dónde se usa cada red (plantas que la habilitan, activos vinculados y tipos del catálogo). */
+/** Dónde se usa cada red (plantas que la habilitan, activos vinculados y modelos del catálogo). */
 export const useNetworkUsage = () => useQuery({ queryKey: ['catalog', 'networks', 'usage'], queryFn: () => api<NetworkUsage[]>('/networks/catalog/usage') })
 export const useCreateNetwork = () => useCatalogMutation((v: NetworkInput & { code: string }) => send<NetworkMaster>('POST', '/networks/catalog', v))
 export const useUpdateNetwork = () => useCatalogMutation(({ id, ...v }: Partial<NetworkInput> & { id: string }) => send<NetworkMaster>('PATCH', `/networks/catalog/${id}`, v))

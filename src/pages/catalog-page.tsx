@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils'
 import { apiUrl } from '@/lib/api'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { CatalogImportDialog } from '@/pages/catalog-import-dialog'
+import { CatalogDeleteDialog } from '@/pages/catalog-delete-dialog'
 
 type Tab = 'families' | 'types' | 'manufacturers' | 'models' | 'variables'
 
@@ -112,15 +113,13 @@ function FamiliesTab() {
   )
 }
 
-/** Alta/edición de un tipo, con las etapas del proceso y las redes transversales donde se usa (con eso se filtra el catálogo público). */
+/** Alta/edición de un tipo, con las etapas posibles del proceso. */
 function TypeDialog({ row, onClose }: { row?: AssetType; onClose: () => void }) {
   const families = useFamilies()
   const stages = useStageMasters()
-  const networks = useNetworkMasters()
   const create = useCreateType()
   const update = useUpdateType()
   const [stageCodes, setStageCodes] = useState<string[]>(row?.stageCodes ?? [])
-  const [networkCodes, setNetworkCodes] = useState<string[]>(row?.networkCodes ?? [])
   const m = row ? update : create
   const fields: Field[] = [
     { name: 'familyCode', label: 'Familia', type: 'select', required: true, options: (families.data ?? []).map((f) => ({ value: f.code, label: f.name })) },
@@ -130,8 +129,8 @@ function TypeDialog({ row, onClose }: { row?: AssetType; onClose: () => void }) 
   ]
   const submit = (v: Values) => {
     const done = { onSuccess: () => { toast.success(row ? 'Tipo actualizado' : 'Tipo creado'); onClose() } }
-    if (row) update.mutate({ id: row.id, name: String(v.name).trim(), familyCode: String(v.familyCode), description: nul(v.description), stageCodes, networkCodes }, done)
-    else create.mutate({ familyCode: String(v.familyCode), code: upper(v.code), name: String(v.name).trim(), description: opt(v.description), stageCodes, networkCodes }, done)
+    if (row) update.mutate({ id: row.id, name: String(v.name).trim(), familyCode: String(v.familyCode), description: nul(v.description), stageCodes }, done)
+    else create.mutate({ familyCode: String(v.familyCode), code: upper(v.code), name: String(v.name).trim(), description: opt(v.description), stageCodes }, done)
   }
   return (
     <FormDialog
@@ -143,7 +142,6 @@ function TypeDialog({ row, onClose }: { row?: AssetType; onClose: () => void }) 
       extra={
         <>
           <CheckGroup legend="Etapas del proceso posibles" options={(stages.data ?? []).map((s) => ({ value: s.code, label: `${s.code} · ${s.name}` }))} value={stageCodes} onChange={setStageCodes} help="Son las etapas posibles para los modelos de este tipo: cada modelo elige en cuáles participa realmente." />
-          <CheckGroup legend="Redes transversales" options={(networks.data ?? []).map((n) => ({ value: n.code, label: n.name }))} value={networkCodes} onChange={setNetworkCodes} help="Así aparece el tipo al filtrar el catálogo por red transversal." />
         </>
       }
       onClose={onClose}
@@ -162,14 +160,13 @@ function TypesTab() {
     <>
       <Section title="Tipos de activo" subtitle="Qué clase de equipo es (bomba centrífuga, molino, chancadora…) y dónde se usa." addLabel="Nuevo tipo" onAdd={() => setForm({})}>
         {q.isLoading ? <div className="p-4"><Loading rows={5} /></div> : q.isError ? <Failed what="los tipos" onRetry={() => void q.refetch()} /> : q.data && q.data.length > 0 ? (
-          <DataTable head={['Código', 'Tipo', 'Familia', 'Etapas', 'Redes', { label: '', right: true }]}>
+          <DataTable head={['Código', 'Tipo', 'Familia', 'Etapas', { label: '', right: true }]}>
             {q.data.map((t) => (
               <tr key={t.id}>
                 <td className={`${td} fur-code text-xs`}>{t.code}</td>
                 <td className={`${td} font-medium text-fur-navy-900`}>{t.name}</td>
                 <td className={td}>{t.familyName}</td>
                 <td className={`${td} fur-code text-xs`} title={t.stageCodes.join(', ')}>{summary(t.stageCodes, 4) ?? <span className="text-muted-foreground">Sin etapas</span>}</td>
-                <td className={`${td} text-xs`} title={t.networkCodes.join(', ')}>{summary(t.networkCodes.map((c) => c.replace('FUR-', '')), 4) ?? <span className="text-muted-foreground">Sin redes</span>}</td>
                 <td className={`${td} text-right`}>
                   <div className="flex justify-end gap-1.5">
                     <Button size="xs" variant="secondary" aria-label={`Editar ${t.name}`} onClick={() => setForm({ row: t })}><Pencil /> Editar</Button>
@@ -271,6 +268,8 @@ function ModelsTab() {
   const [form, setForm] = useState<{ row?: Model } | null>(null)
   const [variablesOf, setVariablesOf] = useState<Model | null>(null)
   const stageMasters = useStageMasters()
+  const networkMasters = useNetworkMasters()
+  const [networkCodes, setNetworkCodes] = useState<string[]>([])
   /** Etapas elegidas para el modelo, con el tipo al que corresponden (al cambiar de tipo se vuelve a empezar). */
   const [stageSel, setStageSel] = useState<{ typeCode: string; codes: string[] } | null>(null)
   const editing = form?.row
@@ -299,9 +298,9 @@ function ModelsTab() {
     try {
       let id = editing?.id
       if (editing) {
-        await update.mutateAsync({ id: editing.id, modelName: String(v.modelName).trim(), manufacturerId: nul(v.manufacturerId), status: v.status as 'ACTIVE' | 'INACTIVE', stageCodes: stagesFor(editing.type.code).selected })
+        await update.mutateAsync({ id: editing.id, modelName: String(v.modelName).trim(), manufacturerId: nul(v.manufacturerId), status: v.status as 'ACTIVE' | 'INACTIVE', stageCodes: stagesFor(editing.type.code).selected, networkCodes })
       } else {
-        id = (await create.mutateAsync({ typeCode: String(v.typeCode), modelName: String(v.modelName).trim(), manufacturerId: opt(v.manufacturerId), stageCodes: stagesFor(String(v.typeCode)).selected })).id
+        id = (await create.mutateAsync({ typeCode: String(v.typeCode), modelName: String(v.modelName).trim(), manufacturerId: opt(v.manufacturerId), stageCodes: stagesFor(String(v.typeCode)).selected, networkCodes })).id
       }
       try {
         if (id && image.file) await uploadImage.mutateAsync({ id, file: image.file })
@@ -338,10 +337,10 @@ function ModelsTab() {
           <option value="INACTIVE">Inactivos</option>
         </select>
       </div>
-      <Section title="Modelos" subtitle="Describen qué existe; los activos de cada planta se crean a partir de un modelo." addLabel="Nuevo modelo" onAdd={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel(null); setForm({}) }}>
+      <Section title="Modelos" subtitle="Describen qué existe; los activos de cada planta se crean a partir de un modelo." addLabel="Nuevo modelo" onAdd={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel(null); setNetworkCodes([]); setForm({}) }}>
         {q.isLoading ? <div className="p-4"><Loading rows={6} /></div> : q.isError ? <Failed what="los modelos" onRetry={() => void q.refetch()} /> : q.data && q.data.items.length > 0 ? (
           <>
-            <DataTable head={['Foto', 'TAG / Modelo', 'Tipo', 'Etapas', 'Familia', 'Fabricante', 'Estado', { label: '', right: true }]}>
+            <DataTable head={['Foto', 'TAG / Modelo', 'Tipo', 'Etapas', 'Redes', 'Familia', 'Fabricante', 'Estado', { label: '', right: true }]}>
               {q.data.items.map((r) => (
                 <tr key={r.id} className={r.status === 'INACTIVE' ? 'opacity-60' : undefined}>
                   <td className={td}>
@@ -361,13 +360,14 @@ function ModelsTab() {
                       </span>
                     )}
                   </td>
+                  <td className={`${td} text-xs`}>{r.networkCodes.length ? r.networkCodes.map(code => networkMasters.data?.find(n => n.code === code)?.name ?? code).join(' · ') : <span className="text-muted-foreground">Sin redes</span>}</td>
                   <td className={td}>{r.family.name}</td>
                   <td className={td}>{r.manufacturer?.name ?? '—'}</td>
                   <td className={td}><Pill label={r.status === 'ACTIVE' ? 'Activo' : 'Inactivo'} color={r.status === 'ACTIVE' ? 'var(--fur-green-500)' : 'var(--fur-steel-500)'} /></td>
                   <td className={`${td} text-right`}>
                     <div className="flex justify-end gap-1.5">
                       <Button size="xs" variant="outline" aria-label={`Datos del fabricante de ${r.modelName}`} onClick={() => setVariablesOf(r)}><ListChecks /> Datos del fabricante</Button>
-                      <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel({ typeCode: r.type.code, codes: r.stageCodes }); setForm({ row: r }) }}><Pencil /> Editar</Button>
+                      <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel({ typeCode: r.type.code, codes: r.stageCodes }); setNetworkCodes(r.networkCodes); setForm({ row: r }) }}><Pencil /> Editar</Button>
                       <Button size="xs" variant="outline" aria-label={`Eliminar ${r.modelName}`} onClick={() => { del.reset(); setRemoving(r) }}><Trash2 /> Eliminar</Button>
                     </div>
                   </td>
@@ -419,6 +419,7 @@ function ModelsTab() {
                   ) : (
                     <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">El tipo aún no tiene etapas posibles. Agrégalas en la pestaña «Tipos» para poder elegir en cuáles participa este modelo.</p>
                   ))}
+                <CheckGroup legend="Redes transversales" options={(networkMasters.data ?? []).map(n => ({ value: n.code, label: n.name }))} value={networkCodes} onChange={setNetworkCodes} help="Estas redes corresponden solo a este modelo. Sin seleccionar ninguna, el modelo queda sin redes asignadas." />
                 <ModelImagePicker currentUrl={editing?.imageUrl ?? null} value={image} onChange={setImage} />
               </>
             )
@@ -434,11 +435,13 @@ function ModelsTab() {
 export function CatalogPage() {
   const [tab, setTab] = useState<Tab>('models')
   const [importing, setImporting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   return (
     <>
       <ScreenHeader title="Catálogo de activos" description="Catálogo maestro global: describe qué existe, no qué posee cada planta. Los códigos son inmutables."
-        actions={<Button variant="outline" onClick={() => setImporting(true)}><FileSpreadsheet /> Importar Excel</Button>} />
+        actions={<><Button variant="outline" onClick={() => setImporting(true)}><FileSpreadsheet /> Importar Excel</Button><Button variant="outline" onClick={() => setDeleting(true)}><Trash2 /> Eliminar por Excel</Button></>} />
       {importing && <CatalogImportDialog onClose={() => setImporting(false)} onImported={() => setTab('models')} />}
+      {deleting && <CatalogDeleteDialog onClose={() => setDeleting(false)} onDeleted={() => setTab('models')} />}
       <Segmented<Tab>
         label="Catálogo"
         value={tab}

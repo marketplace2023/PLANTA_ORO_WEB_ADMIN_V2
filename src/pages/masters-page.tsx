@@ -91,7 +91,7 @@ function NetworkDialog({ row, onClose }: { row?: NetworkMaster; onClose: () => v
   return (
     <FormDialog
       title={row ? `Editar red ${row.code}` : 'Nueva red transversal'}
-      description={row ? undefined : 'Después podrás habilitarla en cada planta y asignarla a los tipos del catálogo.'}
+      description={row ? undefined : 'Después podrás habilitarla en cada planta y asignarla a los modelos del catálogo.'}
       fields={fields}
       initial={row ? { code: row.code, name: row.name, description: row.description ?? '', icon: row.icon ?? '', colorToken: row.colorToken ?? '', sequence: String(row.sequence) } : {}}
       busy={saving}
@@ -117,13 +117,13 @@ function DeleteNetworkDialog({ row, usage, onClose }: { row: NetworkMaster; usag
             {row.name}. Esta acción no se puede deshacer.
           </DialogDescription>
         </DialogHeader>
-        {usage && (usage.plants > 0 || usage.types > 0) ? (
+        {usage && (usage.plants > 0 || usage.models > 0) ? (
           <ul className="space-y-1 rounded-md bg-muted p-3 text-sm">
             {usage.plants > 0 && <li>Se quitará de {plural(usage.plants, 'planta que la habilita', 'plantas que la habilitan')}{usage.assets > 0 ? ` y se desvinculará de ${plural(usage.assets, 'activo', 'activos')}` : ''}.</li>}
-            {usage.types > 0 && <li>Se quitará de {plural(usage.types, 'tipo del catálogo', 'tipos del catálogo')}.</li>}
+            {usage.models > 0 && <li>Se quitará de {plural(usage.models, 'modelo del catálogo', 'modelos del catálogo')}.</li>}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">No la usa ninguna planta ni tipo del catálogo.</p>
+          <p className="text-sm text-muted-foreground">No la usa ninguna planta ni modelo del catálogo.</p>
         )}
         {remove.error && <p role="alert" className="rounded-md bg-fur-red-500/10 p-3 text-sm text-fur-red-500">{errorMessage(remove.error)}</p>}
         <DialogFooter>
@@ -248,10 +248,11 @@ function DeleteStageDialog({ row, usage, onClose }: { row: StageMaster; usage?: 
   )
 }
 
-function usageText(u: NetworkUsage | undefined) {
+function usageText(u: NetworkUsage | StageUsage | undefined) {
   if (!u) return null
-  if (u.plants === 0 && u.types === 0) return 'Sin uso'
-  return [u.plants > 0 && plural(u.plants, 'planta', 'plantas'), u.types > 0 && plural(u.types, 'tipo', 'tipos')].filter(Boolean).join(' · ')
+  const count = 'models' in u ? u.models : u.types
+  if (u.plants === 0 && count === 0) return 'Sin uso'
+  return [u.plants > 0 && plural(u.plants, 'planta', 'plantas'), count > 0 && plural(count, 'models' in u ? 'modelo' : 'tipo', 'models' in u ? 'modelos' : 'tipos')].filter(Boolean).join(' · ')
 }
 
 export function MastersPage() {
