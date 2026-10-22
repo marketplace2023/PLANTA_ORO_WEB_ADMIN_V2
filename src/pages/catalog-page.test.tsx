@@ -20,6 +20,12 @@ const setup = () => mockApi({
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Redes propias del modelo', () => {
+  it('abre la eliminación por Excel desde el catálogo', async () => {
+    setup()
+    renderWithProviders(<CatalogPage />)
+    await userEvent.click(screen.getByRole('button', { name: 'Eliminar por Excel' }))
+    expect(screen.getByRole('heading', { name: 'Eliminar modelos por Excel' })).toBeInTheDocument()
+  })
   it('edita y vacía las redes del modelo y empieza los modelos nuevos sin asignación', async () => {
     const mock = setup()
     renderWithProviders(<CatalogPage />)

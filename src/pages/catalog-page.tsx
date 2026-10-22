@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils'
 import { apiUrl } from '@/lib/api'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { CatalogImportDialog } from '@/pages/catalog-import-dialog'
+import { CatalogDeleteDialog } from '@/pages/catalog-delete-dialog'
 
 type Tab = 'families' | 'types' | 'manufacturers' | 'models' | 'variables'
 
@@ -434,11 +435,13 @@ function ModelsTab() {
 export function CatalogPage() {
   const [tab, setTab] = useState<Tab>('models')
   const [importing, setImporting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   return (
     <>
       <ScreenHeader title="Catálogo de activos" description="Catálogo maestro global: describe qué existe, no qué posee cada planta. Los códigos son inmutables."
-        actions={<Button variant="outline" onClick={() => setImporting(true)}><FileSpreadsheet /> Importar Excel</Button>} />
+        actions={<><Button variant="outline" onClick={() => setImporting(true)}><FileSpreadsheet /> Importar Excel</Button><Button variant="outline" onClick={() => setDeleting(true)}><Trash2 /> Eliminar por Excel</Button></>} />
       {importing && <CatalogImportDialog onClose={() => setImporting(false)} onImported={() => setTab('models')} />}
+      {deleting && <CatalogDeleteDialog onClose={() => setDeleting(false)} onDeleted={() => setTab('models')} />}
       <Segmented<Tab>
         label="Catálogo"
         value={tab}

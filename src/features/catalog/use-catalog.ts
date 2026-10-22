@@ -77,6 +77,16 @@ export type CatalogImportResult = CatalogImportPreview & { imported: number }
 export const usePreviewCatalogImport = () => useMutation({ mutationFn: ({ file, networkCodes }: { file: File; networkCodes: string[] }) => api<CatalogImportPreview>('/catalog/imports/preview', { method: 'POST', ...formBody({ networkCodes: JSON.stringify(networkCodes) }, file) }) })
 export const useApplyCatalogImport = () => useCatalogMutation(({ file, fingerprint, networkCodes, allowMissingSpecifications = false }: { file: File; fingerprint: string; networkCodes: string[]; allowMissingSpecifications?: boolean }) => api<CatalogImportResult>('/catalog/imports', { method: 'POST', ...formBody({ fingerprint, networkCodes: JSON.stringify(networkCodes), allowMissingSpecifications: String(allowMissingSpecifications) }, file) }))
 
+export type CatalogDeletePreview = {
+  fingerprint: string
+  issues: Array<{ sheet: string; row: number; message: string }>
+  summary: { listed: number; found: number; missing: number; blocked: number; deletable: number; unlinkedListings: number }
+  rows: Array<{ tag: string; row: number; modelId: string | null; modelName: string | null; family: string | null; type: string | null; state: 'DELETE' | 'NOT_FOUND' | 'BLOCKED'; assets: number; inventoryItems: number; listings: number }>
+}
+export type CatalogDeleteResult = CatalogDeletePreview & { deleted: number }
+export const usePreviewCatalogDelete = () => useMutation({ mutationFn: (file: File) => api<CatalogDeletePreview>('/catalog/deletions/preview', { method: 'POST', ...formBody({}, file) }) })
+export const useApplyCatalogDelete = () => useCatalogMutation(({ file, fingerprint, confirm }: { file: File; fingerprint: string; confirm: string }) => api<CatalogDeleteResult>('/catalog/deletions', { method: 'POST', ...formBody({ fingerprint, confirm }, file) }))
+
 /** Cualquier cambio del catálogo invalida lo que cuelga de ['catalog'] y los totales del dashboard. */
 function useCatalogMutation<V, T = unknown>(fn: (v: V) => Promise<T>) {
   const qc = useQueryClient()
