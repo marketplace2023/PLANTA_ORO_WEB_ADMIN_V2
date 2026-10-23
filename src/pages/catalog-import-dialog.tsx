@@ -1,4 +1,4 @@
-import { CheckCircle2, FileSpreadsheet, LoaderCircle } from 'lucide-react'
+import { CheckCircle2, Download, FileSpreadsheet, LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -60,7 +60,16 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
           </div>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground">Hojas requeridas: Listado maestro, Categorías N4, Características y Especificaciones. Las familias se unifican por Código CA. Sin carga de fotos ni parámetros técnicos.</p>
+            <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-border bg-muted/40 p-4">
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="text-sm font-medium">Prepara tu archivo con la plantilla</p>
+                <p className="text-sm text-muted-foreground">Incluye las cuatro hojas requeridas, las familias del listado original y filas de activos vacías. Conserva los nombres de las hojas y sus encabezados.</p>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <a href={`${import.meta.env.BASE_URL}templates/plantilla-importacion-catalogo.xlsx`} download="plantilla-importacion-catalogo.xlsx"><Download /> Descargar plantilla Excel</a>
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">Completa Listado maestro y usa el mismo TAG ACTIVO en Características y Especificaciones. Cada activo necesita una fila en Características, aunque sus componentes estén vacíos. En Especificaciones, usa una fila por parámetro; si no tiene especificaciones, podrás aceptarlo después del análisis. Las familias se unifican por Código CA y su nombre en Categorías N4. Las redes se eligen aquí.</p>
             {networks.isLoading ? <p role="status" className="text-sm text-muted-foreground">Cargando redes transversales…</p> : networks.isError ? (
               <div role="alert" className="flex items-center gap-3 text-sm text-red-800">
                 <span>No se pudieron cargar las redes transversales.</span>

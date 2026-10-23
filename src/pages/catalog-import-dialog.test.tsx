@@ -17,6 +17,17 @@ const file = () => new File(['test workbook'], 'maestro.xlsx', { type: 'applicat
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Redes de la importación Excel', () => {
+  it('ofrece descargar la plantilla antes de seleccionar redes o subir un archivo', async () => {
+    mockApi({ 'GET /networks/catalog': { body: NETWORKS } })
+    renderWithProviders(<CatalogImportDialog onClose={vi.fn()} onImported={vi.fn()} />)
+    const template = screen.getByRole('link', { name: 'Descargar plantilla Excel' })
+    expect(template).toHaveAttribute('href', `${import.meta.env.BASE_URL}templates/plantilla-importacion-catalogo.xlsx`)
+    expect(template).toHaveAttribute('download', 'plantilla-importacion-catalogo.xlsx')
+    expect(screen.getByText(/filas de activos vacías/)).toBeInTheDocument()
+    await screen.findByRole('checkbox', { name: 'Procesos' })
+    expect(screen.getByRole('button', { name: 'Analizar Excel' })).toBeDisabled()
+  })
+
   it('exige selección, la envía a la vista previa y la confirmación y muestra el resultado', async () => {
     const chosen = NETWORKS.slice(1)
     const mock = mockApi({
