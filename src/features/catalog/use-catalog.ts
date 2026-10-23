@@ -87,6 +87,24 @@ export type CatalogDeleteResult = CatalogDeletePreview & { deleted: number }
 export const usePreviewCatalogDelete = () => useMutation({ mutationFn: (file: File) => api<CatalogDeletePreview>('/catalog/deletions/preview', { method: 'POST', ...formBody({}, file) }) })
 export const useApplyCatalogDelete = () => useCatalogMutation(({ file, fingerprint, confirm }: { file: File; fingerprint: string; confirm: string }) => api<CatalogDeleteResult>('/catalog/deletions', { method: 'POST', ...formBody({ fingerprint, confirm }, file) }))
 
+export type CatalogImageRow = {
+  index: number; filename: string; tag: string | null; modelId: string | null; modelName: string | null
+  state: 'READY' | 'EXISTING' | 'NOT_FOUND' | 'DUPLICATE' | 'INVALID' | 'AMBIGUOUS'
+  message: string; imageUrl: string | null; imageVersion: string
+}
+export const usePreviewCatalogImages = () => useMutation({
+  mutationFn: (files: File[]) => api<{ rows: CatalogImageRow[] }>('/catalog/image-imports/preview', {
+    method: 'POST', ...jsonBody({ files: files.map(file => ({ name: file.name, size: file.size })) }),
+  }),
+})
+// El diálogo invalida el catálogo una vez al terminar el lote, también si hubo fallos parciales.
+export const useUploadCatalogImage = () => useMutation({
+  mutationFn: ({ file, row, replaceExisting }: { file: File; row: CatalogImageRow; replaceExisting: boolean }) =>
+    api<{ id: string; tag: string; imageUrl: string }>('/catalog/image-imports', {
+      method: 'POST', ...formBody({ modelId: row.modelId!, imageVersion: row.imageVersion, replaceExisting: String(replaceExisting) }, file),
+    }),
+})
+
 /** Cualquier cambio del catálogo invalida lo que cuelga de ['catalog'] y los totales del dashboard. */
 function useCatalogMutation<V, T = unknown>(fn: (v: V) => Promise<T>) {
   const qc = useQueryClient()
