@@ -20,6 +20,12 @@ const setup = () => mockApi({
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Redes propias del modelo', () => {
+  it('abre la carga de imágenes por TAG desde el catálogo', async () => {
+    setup()
+    renderWithProviders(<CatalogPage />)
+    await userEvent.click(screen.getByRole('button', { name: 'Cargar imágenes' }))
+    expect(screen.getByRole('heading', { name: 'Cargar imágenes por TAG' })).toBeInTheDocument()
+  })
   it('abre la eliminación por Excel desde el catálogo', async () => {
     setup()
     renderWithProviders(<CatalogPage />)

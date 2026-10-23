@@ -1,4 +1,4 @@
-import { FileSpreadsheet, ImageIcon, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { FileSpreadsheet, ImageIcon, ImagePlus, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { CheckGroup } from '@/components/check-group'
@@ -41,6 +41,7 @@ import { apiUrl } from '@/lib/api'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { CatalogImportDialog } from '@/pages/catalog-import-dialog'
 import { CatalogDeleteDialog } from '@/pages/catalog-delete-dialog'
+import { CatalogImagesDialog } from '@/pages/catalog-images-dialog'
 
 type Tab = 'families' | 'types' | 'manufacturers' | 'models' | 'variables'
 
@@ -436,10 +437,12 @@ export function CatalogPage() {
   const [tab, setTab] = useState<Tab>('models')
   const [importing, setImporting] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [uploadingImages, setUploadingImages] = useState(false)
   return (
     <>
       <ScreenHeader title="Catálogo de activos" description="Catálogo maestro global: describe qué existe, no qué posee cada planta. Los códigos son inmutables."
-        actions={<><Button variant="outline" onClick={() => setImporting(true)}><FileSpreadsheet /> Importar Excel</Button><Button variant="outline" onClick={() => setDeleting(true)}><Trash2 /> Eliminar por Excel</Button></>} />
+        actions={<><Button variant="outline" onClick={() => setUploadingImages(true)}><ImagePlus /> Cargar imágenes</Button><Button variant="outline" onClick={() => setImporting(true)}><FileSpreadsheet /> Importar Excel</Button><Button variant="outline" onClick={() => setDeleting(true)}><Trash2 /> Eliminar por Excel</Button></>} />
+      {uploadingImages && <CatalogImagesDialog onClose={() => setUploadingImages(false)} />}
       {importing && <CatalogImportDialog onClose={() => setImporting(false)} onImported={() => setTab('models')} />}
       {deleting && <CatalogDeleteDialog onClose={() => setDeleting(false)} onDeleted={() => setTab('models')} />}
       <Segmented<Tab>
