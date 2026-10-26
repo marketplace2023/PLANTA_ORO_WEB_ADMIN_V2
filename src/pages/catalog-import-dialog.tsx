@@ -63,13 +63,13 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
             <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-border bg-muted/40 p-4">
               <div className="min-w-0 flex-1 space-y-1">
                 <p className="text-sm font-medium">Prepara tu archivo con la plantilla</p>
-                <p className="text-sm text-muted-foreground">Incluye las cuatro hojas requeridas, las familias del listado original y filas de activos vacías. Conserva los nombres de las hojas y sus encabezados.</p>
+                <p className="text-sm text-muted-foreground">Incluye instrucciones, las hojas de datos, fabricantes de referencia, las familias del listado original y filas de activos vacías. Conserva los nombres de las hojas y sus encabezados.</p>
               </div>
               <Button variant="outline" size="sm" asChild>
                 <a href={`${import.meta.env.BASE_URL}templates/plantilla-importacion-catalogo.xlsx`} download="plantilla-importacion-catalogo.xlsx"><Download /> Descargar plantilla Excel</a>
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">Completa Listado maestro y usa el mismo TAG ACTIVO en Características y Especificaciones. Cada activo necesita una fila en Características, aunque sus componentes estén vacíos. En Especificaciones, usa una fila por parámetro; si no tiene especificaciones, podrás aceptarlo después del análisis. Las familias se unifican por Código CA y su nombre en Categorías N4. Las redes se eligen aquí.</p>
+            <p className="text-sm text-muted-foreground">Completa Listado maestro y repite el mismo TAG ACTIVO en las otras hojas: una fila por componente en Características, una por parámetro en Especificaciones y una por fabricante en Fabricantes de referencia. Si no hay componentes o referencias, omite sus filas. Si faltan especificaciones, podrás aceptarlo después del análisis. Las familias se unifican por Código CA y su nombre en Categorías N4. Las redes se eligen aquí.</p>
             {networks.isLoading ? <p role="status" className="text-sm text-muted-foreground">Cargando redes transversales…</p> : networks.isError ? (
               <div role="alert" className="flex items-center gap-3 text-sm text-red-800">
                 <span>No se pudieron cargar las redes transversales.</span>
@@ -128,15 +128,22 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
                 </div>
                 <p className="text-xs text-muted-foreground">Los fabricantes usan solo el nombre fuera de paréntesis. {preview.summary.manufacturers.merged > 0 ? `Se unificarán ${preview.summary.manufacturers.merged} variantes existentes conservando sus modelos y activos asociados.` : 'Las notas entre paréntesis no crean fabricantes diferentes.'}</p>
                 <p className="text-xs text-muted-foreground">Las especificaciones, los componentes y las redes de los TAG del archivo se reemplazan con lo revisado aquí. Las fotos existentes se conservan.</p>
+                <p className="text-xs text-muted-foreground">Si el archivo incluye Fabricantes de referencia, se reemplazan las referencias de todos los TAG del listado, incluso con una lista vacía. Los archivos anteriores sin esa hoja conservan las referencias actuales.</p>
                 <div className="max-h-64 overflow-auto rounded-md border border-border">
                   <table className="w-full text-left text-xs">
                     <thead className="sticky top-0 bg-muted"><tr>{['TAG / modelo', 'Familia / tipo', 'Fabricante', 'Etapa', 'Acción'].map(h => <th className="px-3 py-2" key={h}>{h}</th>)}</tr></thead>
                     <tbody>{preview.rows.map(r => (
                       <tr key={r.tag} className="border-t border-border align-top">
                         <td className="min-w-60 px-3 py-2"><span className="fur-code">{r.tag}</span><p className="mt-1 font-medium">{r.name}</p>
-                          <details className="mt-2"><summary className="cursor-pointer text-fur-navy-700">Ver componente y {Object.keys(r.specifications).length} especificaciones</summary>
-                            <p className="my-2 whitespace-pre-wrap">{r.components[0] ?? 'Sin componente informado'}</p>
+                          <details className="mt-2"><summary className="cursor-pointer text-fur-navy-700">Ver componentes, especificaciones y fabricantes</summary>
+                            <p className="mt-3 mb-1 font-medium">Componentes principales</p>
+                            {r.components.length > 0 ? <ol className="mb-3 list-decimal space-y-1 pl-5">{r.components.map((component, i) => <li key={i} className="whitespace-pre-wrap">{component}</li>)}</ol> : <p className="mb-3">Sin componentes informados</p>}
+                            <p className="mb-1 font-medium">Especificaciones técnicas</p>
                             <dl className="space-y-1">{Object.entries(r.specifications).map(([k, v]) => <div key={k}><dt className="font-medium">{k}</dt><dd>{v}</dd></div>)}</dl>
+                            <p className="mt-3 mb-1 font-medium">Fabricantes de referencia y web</p>
+                            {r.referenceManufacturers == null ? <p>Se conservan las referencias actuales; el archivo no incluye la hoja de fabricantes.</p> : r.referenceManufacturers.length === 0 ? <p>Sin fabricantes de referencia. Se vaciarán las referencias anteriores.</p> : (
+                              <ul className="list-disc space-y-2 pl-5">{r.referenceManufacturers.map((m, i) => <li key={i}><p className="font-medium">{m.nombre}</p>{m.alcance && <p className="whitespace-pre-wrap">{m.alcance}</p>}{m.sitioWeb && <p className="break-all">{m.sitioWeb}</p>}</li>)}</ul>
+                            )}
                           </details>
                         </td>
                         <td className="min-w-48 px-3 py-2"><p className="font-medium">{r.family}</p><p className="mt-1 text-muted-foreground">{r.type}</p></td>

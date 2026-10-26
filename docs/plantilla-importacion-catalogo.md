@@ -1,12 +1,12 @@
 # Plantilla de importación del catálogo
 
-En **Catálogo de activos → Importar Excel → Descargar plantilla Excel** se descarga `public/templates/plantilla-importacion-catalogo.xlsx`. Es un archivo estático incluido en el despliegue del admin; no requiere cambios ni migraciones en la API.
+En **Catálogo de activos → Importar Excel → Descargar plantilla Excel** se descarga `public/templates/plantilla-importacion-catalogo.xlsx`. Es un archivo estático incluido en el despliegue del admin. La lectura de varios componentes y fabricantes de referencia requiere desplegar la API actualizada antes o junto con el admin. No hay cambios de esquema ni migraciones de base de datos.
 
-Se preparó a partir de `LISTADO_MAESTRO_140_ACTIVOS_ESPECIFICACIONES_SIN_REF.xlsx`, conservando solo las cuatro hojas y los encabezados que utiliza el importador. Mantiene las 54 familias de **Categorías N4**, con sus códigos como texto para conservar los ceros iniciales. Las otras tres hojas están vacías, sin activos de ejemplo que puedan importarse por accidente. No contiene fórmulas, imágenes ni vínculos externos.
+La plantilla tiene seis hojas: **Instrucciones**, **Listado maestro**, **Categorías N4**, **Características**, **Especificaciones** y **Fabricantes de referencia**. Mantiene las 54 familias del listado original, con sus códigos como texto para conservar los ceros iniciales. Las hojas de carga están vacías, sin activos de ejemplo que puedan importarse por accidente. Los ejemplos están únicamente en Instrucciones y el importador los ignora. No contiene fórmulas, imágenes ni vínculos a otros libros.
 
 ## Cómo completarla
 
-Conserva los nombres de las hojas y los encabezados de la primera fila. Introduce los datos desde la segunda fila; las tablas de Excel permiten agregar más filas.
+Empieza por Instrucciones: explica los campos y muestra un ejemplo con dos especificaciones, dos componentes y dos fabricantes asociados al mismo TAG. Conserva los nombres de las hojas de datos y sus encabezados de la primera fila. Introduce los datos desde la segunda fila; las tablas de Excel permiten agregar más filas.
 
 ### Listado maestro
 
@@ -28,7 +28,7 @@ Contiene **Código CA** y **Categoría N4**. Puedes agregar familias o modificar
 
 ### Características
 
-Contiene **TAG ACTIVO** y **Componentes principales**. Debe existir una fila por cada TAG del listado, incluso cuando el componente esté vacío. El texto completo de componentes se guarda como un solo elemento.
+Contiene **TAG ACTIVO** y **Componentes principales**. Cada fila es un componente; repite el TAG para asociar varios componentes al mismo modelo. Se conserva el orden de las filas y el texto de cada componente no se divide por comas ni puntos. Puedes omitir las filas de modelos sin componentes y se guardarán con una lista vacía. Las filas antiguas con solo el TAG y sin texto también representan una lista vacía. La hoja y sus encabezados se mantienen aunque no haya componentes.
 
 ### Especificaciones
 
@@ -36,9 +36,19 @@ Contiene **TAG ACTIVO**, **Parámetro técnico**, **Unidad** y **Valor / estado*
 
 Si un modelo no tiene especificaciones, no agregues filas para él en esta hoja. Después de analizar el archivo, marca **Importar también los modelos sin especificaciones técnicas**. La hoja y sus encabezados deben mantenerse aunque todos los modelos carezcan de especificaciones.
 
+### Fabricantes de referencia
+
+Contiene **TAG ACTIVO**, **Fabricante**, **Descripción** y **Sitio web**. Cada fila asocia una referencia a un modelo. Repite el TAG para agregar varios fabricantes. El nombre es obligatorio y admite hasta 160 caracteres; la descripción es opcional y admite hasta 2.000 caracteres. La web es opcional y debe ser una dirección completa `http://` o `https://` de hasta 2.048 caracteres. No se infieren datos del fabricante asignado en Listado maestro.
+
+Se guardan en `technicalData.fabricantesReferencia` como nombre, alcance y sitio web. La ficha muestra las referencias con su descripción y enlace; las cards del catálogo muestran los nombres separados por coma.
+
+Si la hoja está presente, sus filas reemplazan las referencias de todos los TAG incluidos en Listado maestro. Un TAG sin filas queda sin referencias. Para vaciar las referencias de todos esos modelos, conserva la hoja con sus encabezados y sin datos. Las referencias de modelos fuera del archivo no se modifican.
+
+Los archivos anteriores que no tienen esta hoja siguen siendo válidos y conservan las referencias actuales. Si la hoja está presente, sus cuatro encabezados son obligatorios, incluso si todas sus filas están vacías.
+
 ## Antes de importar
 
-Selecciona las redes transversales en el diálogo del admin: no se leen del archivo. Analiza el Excel y revisa las altas y actualizaciones. La carga admite hasta 5 MB y 2.000 modelos. Las especificaciones, componentes y redes de los TAG incluidos reemplazan los datos anteriores; se conservan sus fotos.
+Selecciona las redes transversales en el diálogo del admin: no se leen del archivo. Analiza el Excel y revisa las altas y actualizaciones. Abre **Ver componentes, especificaciones y fabricantes** para revisar todos los datos de cada TAG y si se conservarán o vaciarán sus referencias. La carga admite hasta 5 MB, 2.000 modelos y 25.000 filas por hoja de datos. Los TAG de componentes, especificaciones y referencias deben aparecer en Listado maestro. Las especificaciones, componentes y redes de los TAG incluidos reemplazan los datos anteriores; se conservan sus fotos.
 
 ## Mantenimiento
 

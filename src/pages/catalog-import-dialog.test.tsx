@@ -10,7 +10,7 @@ const COUNTS = { create: 1, update: 0 }
 const preview = (networks: typeof NETWORKS) => ({
   fingerprint: 'a'.repeat(64), issues: [], networks,
   summary: { models: COUNTS, families: COUNTS, types: COUNTS, manufacturers: { ...COUNTS, merged: 0 }, specifications: 1 },
-  rows: [{ tag: 'TEST-01', name: 'Bomba', family: 'Bombas', type: 'Bomba de pulpa', manufacturer: 'Pendiente', stages: ['D05'], components: ['Motor y carcasa'], specifications: { Material: 'Acero' }, action: 'create' }],
+  rows: [{ tag: 'TEST-01', name: 'Bomba', family: 'Bombas', type: 'Bomba de pulpa', manufacturer: 'Pendiente', stages: ['D05'], components: ['Motor y carcasa'], referenceManufacturers: null, specifications: { Material: 'Acero' }, action: 'create' }],
 })
 const file = () => new File(['test workbook'], 'maestro.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
 
@@ -74,6 +74,35 @@ describe('Redes de la importación Excel', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Procesos' }))
     await userEvent.click(screen.getByRole('checkbox', { name: 'Potencia Eléctrica' }))
     expect(screen.getByRole('button', { name: 'Analizar Excel' })).toBeDisabled()
+  })
+
+  it('muestra todos los componentes y fabricantes de referencia revisados antes de importar', async () => {
+    const p = preview([NETWORKS[0]])
+    const extended = { ...p, rows: [{ ...p.rows[0], components: ['Motor y carcasa', 'Impulsor'], referenceManufacturers: [
+      { nombre: 'Metso', alcance: 'Bombas de pulpa', sitioWeb: 'https://www.metso.com/' },
+      { nombre: 'WEG', alcance: null, sitioWeb: null },
+    ] }] }
+    mockApi({ 'GET /networks/catalog': { body: NETWORKS }, 'POST /catalog/imports/preview': { body: extended } })
+    renderWithProviders(<CatalogImportDialog onClose={vi.fn()} onImported={vi.fn()} />)
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Procesos' }))
+    await userEvent.upload(screen.getByLabelText(/Archivo Excel/), file())
+    await userEvent.click(screen.getByRole('button', { name: 'Analizar Excel' }))
+    await userEvent.click(await screen.findByText('Ver componentes, especificaciones y fabricantes'))
+    for (const text of ['Motor y carcasa', 'Impulsor', 'Metso', 'WEG', 'Bombas de pulpa', 'https://www.metso.com/']) expect(screen.getByText(text)).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Importar al catálogo' })).toBeEnabled()
+  })
+
+  it.each([{ references: null, text: /Se conservan las referencias actuales/ }, { references: [], text: /Se vaciarán las referencias anteriores/ }])('explica la conservación o vaciado de referencias ($references)', async ({ references, text }) => {
+    const p = preview([NETWORKS[0]])
+    const extended = { ...p, rows: [{ ...p.rows[0], components: [], referenceManufacturers: references }] }
+    mockApi({ 'GET /networks/catalog': { body: NETWORKS }, 'POST /catalog/imports/preview': { body: extended } })
+    renderWithProviders(<CatalogImportDialog onClose={vi.fn()} onImported={vi.fn()} />)
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Procesos' }))
+    await userEvent.upload(screen.getByLabelText(/Archivo Excel/), file())
+    await userEvent.click(screen.getByRole('button', { name: 'Analizar Excel' }))
+    await userEvent.click(await screen.findByText('Ver componentes, especificaciones y fabricantes'))
+    expect(screen.getByText('Sin componentes informados')).toBeVisible()
+    expect(screen.getByText(text)).toBeVisible()
   })
 
   it('permite reintentar la carga de redes y bloquea el análisis si falla', async () => {
