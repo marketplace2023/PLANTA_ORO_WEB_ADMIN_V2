@@ -14,7 +14,7 @@ Una fila por modelo, con estas columnas:
 
 | Columna | Uso |
 | --- | --- |
-| TAG ACTIVO | Identificador del modelo. Repetir un TAG existente actualiza ese modelo. |
+| TAG ACTIVO | Identificador del modelo. Debe ser nuevo en el catálogo; si ya existe, se bloquea toda la carga e indica sus redes actuales. |
 | Nombre | Nombre del modelo. Puede coincidir con otro del mismo tipo y fabricante si sus etapas son distintas. |
 | Código CA | Identificador de familia, presente en Categorías N4. Incluye una lista desplegable de los códigos originales. |
 | Categoría N4 | Encabezado requerido por el importador. El nombre canónico de la familia se obtiene de Categorías N4 mediante Código CA. |
@@ -42,15 +42,17 @@ Contiene **TAG ACTIVO**, **Fabricante**, **Descripción** y **Sitio web**. Cada 
 
 Se guardan en `technicalData.fabricantesReferencia` como nombre, alcance y sitio web. La ficha muestra las referencias con su descripción y enlace; las cards del catálogo muestran los nombres separados por coma.
 
-Si la hoja está presente, sus filas reemplazan las referencias de todos los TAG incluidos en Listado maestro. Un TAG sin filas queda sin referencias. Para vaciar las referencias de todos esos modelos, conserva la hoja con sus encabezados y sin datos. Las referencias de modelos fuera del archivo no se modifican.
+Si no hay filas para un TAG nuevo, se guarda sin referencias. Los archivos anteriores sin esta hoja también son válidos. Si la hoja está presente, sus cuatro encabezados son obligatorios, incluso si todas sus filas están vacías.
 
-Los archivos anteriores que no tienen esta hoja siguen siendo válidos y conservan las referencias actuales. Si la hoja está presente, sus cuatro encabezados son obligatorios, incluso si todas sus filas están vacías.
+Para modelos anteriores sin TAG que se vinculen por tipo, fabricante, nombre y etapa, se conservan las referencias existentes si falta la hoja; si está presente, se reemplazan por sus filas. Los TAG que ya existen no se pueden importar.
 
 ## Antes de importar
 
-Selecciona las redes transversales en el diálogo del admin: no se leen del archivo. Analiza el Excel y revisa las altas y actualizaciones. Abre **Ver componentes, especificaciones y fabricantes** para revisar todos los datos de cada TAG y si se conservarán o vaciarán sus referencias. La carga admite hasta 5 MB, 2.000 modelos y 25.000 filas por hoja de datos. Los TAG de componentes, especificaciones y referencias deben aparecer en Listado maestro. Las especificaciones, componentes y redes de los TAG incluidos reemplazan los datos anteriores; se conservan sus fotos.
+Selecciona las redes transversales en el diálogo del admin: no se leen del archivo. Analiza el Excel y revisa los resultados. Abre **Ver componentes, especificaciones y fabricantes** para revisar todos los datos de cada TAG. La carga admite hasta 5 MB, 2.000 modelos y 25.000 filas por hoja de datos. Los TAG de componentes, especificaciones y referencias deben aparecer en Listado maestro.
 
-Se permite que dos TAG compartan tipo, fabricante y nombre cuando pertenecen a etapas diferentes. Si comparten también una etapa efectiva, se bloquea la importación e indica las filas reales, ambos TAG y la etapa del conflicto. El TAG sigue siendo único en todo el catálogo y repetirlo actualiza su modelo, incluso si cambia de etapa.
+Si un TAG del listado ya existe en el catálogo, se bloquea **toda la carga sin guardar cambios**. El error muestra su fila, TAG y todas sus redes actuales (nombre y código), o «sin redes asignadas». No importa que selecciones otras redes o cambies su nombre o etapa. La opción para importar sin especificaciones no omite este error. El sistema vuelve a comprobarlo al confirmar. Retira del Excel esos TAG y sus detalles y analiza nuevamente. La guía descargable explica la misma regla; el bloqueo requiere desplegar la API actualizada, sin una migración adicional.
+
+Se permite que dos TAG nuevos compartan tipo, fabricante y nombre cuando pertenecen a etapas diferentes. Si comparten también una etapa efectiva, se bloquea la importación e indica las filas reales, ambos TAG y la etapa del conflicto. Se mantiene la vinculación de modelos anteriores sin TAG por esa combinación.
 
 ## Mantenimiento
 

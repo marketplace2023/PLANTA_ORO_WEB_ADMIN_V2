@@ -47,7 +47,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
       <DialogContent className="sm:max-w-6xl" showCloseButton={!busy}>
         <div>
           <DialogTitle className="flex items-center gap-2 text-lg"><FileSpreadsheet className="size-5" /> Importar catálogo desde Excel</DialogTitle>
-          <DialogDescription className="mt-1">Carga modelos del catálogo global desde el listado maestro. Repetir un TAG actualiza su modelo.</DialogDescription>
+          <DialogDescription className="mt-1">Carga modelos del catálogo global desde el listado maestro. Los TAG existentes bloquean la carga: se mostrarán sus redes actuales y no se sobrescribirán sus datos.</DialogDescription>
         </div>
         {result ? (
           <div role="status" className="space-y-3 py-4">
@@ -79,7 +79,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
               <fieldset disabled={busy} className="min-w-0">
                 <CheckGroup legend="Redes transversales de los modelos" options={(networks.data ?? []).map(n => ({ value: n.code, label: n.name }))} value={networkCodes} onChange={codes => {
                   setNetworkCodes(codes); setPreview(null); setAllowMissingSpecifications(false); setError(null)
-                }} help="Selecciona al menos una red. Se aplicarán a todos los modelos del archivo y reemplazarán sus redes anteriores al actualizar. Las redes de otros modelos se conservan." />
+                }} help="Selecciona al menos una red. Se aplicarán a los modelos importados. Un TAG existente no puede importarse, aunque elijas otra red." />
                 {networks.data?.length === 0 && <p className="mt-2 text-sm text-muted-foreground">Primero crea una red en Etapas y redes.</p>}
               </fieldset>
             )}
@@ -115,7 +115,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
                       <input type="checkbox" className="mt-0.5 size-4 shrink-0 accent-[var(--fur-navy-900)]" disabled={busy} checked={allowMissingSpecifications} onChange={e => { setAllowMissingSpecifications(e.target.checked); setError(null) }} />
                       Importar también los modelos sin especificaciones técnicas
                     </label>
-                    <p>Estos modelos se guardarán con las especificaciones vacías, incluso si tenían datos anteriores. Podrás completarlas después.</p>
+                    <p>Estos modelos se guardarán con las especificaciones vacías. Podrás completarlas después. Esta opción no permite importar TAG existentes.</p>
                   </div>
                 )}
                 <div className="overflow-x-auto">
@@ -127,8 +127,8 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
                   </table>
                 </div>
                 <p className="text-xs text-muted-foreground">Los fabricantes usan solo el nombre fuera de paréntesis. {preview.summary.manufacturers.merged > 0 ? `Se unificarán ${preview.summary.manufacturers.merged} variantes existentes conservando sus modelos y activos asociados.` : 'Las notas entre paréntesis no crean fabricantes diferentes.'}</p>
-                <p className="text-xs text-muted-foreground">Las especificaciones, los componentes y las redes de los TAG del archivo se reemplazan con lo revisado aquí. Las fotos existentes se conservan.</p>
-                <p className="text-xs text-muted-foreground">Si el archivo incluye Fabricantes de referencia, se reemplazan las referencias de todos los TAG del listado, incluso con una lista vacía. Los archivos anteriores sin esa hoja conservan las referencias actuales.</p>
+                <p className="text-xs text-muted-foreground">Si algún TAG ya existe en el catálogo, se bloquea toda la carga sin guardar cambios. Retira esas filas y sus detalles del Excel y vuelve a analizar.</p>
+                <p className="text-xs text-muted-foreground">Cada TAG nuevo recibirá las especificaciones, los componentes y los fabricantes de referencia revisados aquí.</p>
                 <div className="max-h-64 overflow-auto rounded-md border border-border">
                   <table className="w-full text-left text-xs">
                     <thead className="sticky top-0 bg-muted"><tr>{['TAG / modelo', 'Familia / tipo', 'Fabricante', 'Etapa', 'Acción'].map(h => <th className="px-3 py-2" key={h}>{h}</th>)}</tr></thead>
@@ -141,7 +141,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
                             <p className="mb-1 font-medium">Especificaciones técnicas</p>
                             <dl className="space-y-1">{Object.entries(r.specifications).map(([k, v]) => <div key={k}><dt className="font-medium">{k}</dt><dd>{v}</dd></div>)}</dl>
                             <p className="mt-3 mb-1 font-medium">Fabricantes de referencia y web</p>
-                            {r.referenceManufacturers == null ? <p>Se conservan las referencias actuales; el archivo no incluye la hoja de fabricantes.</p> : r.referenceManufacturers.length === 0 ? <p>Sin fabricantes de referencia. Se vaciarán las referencias anteriores.</p> : (
+                            {r.referenceManufacturers == null ? <p>El archivo no incluye la hoja de fabricantes de referencia.</p> : r.referenceManufacturers.length === 0 ? <p>Sin fabricantes de referencia informados.</p> : (
                               <ul className="list-disc space-y-2 pl-5">{r.referenceManufacturers.map((m, i) => <li key={i}><p className="font-medium">{m.nombre}</p>{m.alcance && <p className="whitespace-pre-wrap">{m.alcance}</p>}{m.sitioWeb && <p className="break-all">{m.sitioWeb}</p>}</li>)}</ul>
                             )}
                           </details>

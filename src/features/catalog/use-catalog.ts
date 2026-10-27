@@ -68,7 +68,7 @@ export const useHealth = () => useQuery({ queryKey: ['health'], queryFn: () => a
 export type CatalogImportPreview = {
   fingerprint: string
   networks: Array<{ code: string; name: string }>
-  issues: Array<{ sheet: string; row: number; message: string; code?: 'MISSING_SPECIFICATIONS' }>
+  issues: Array<{ sheet: string; row: number; message: string; code?: 'MISSING_SPECIFICATIONS' | 'TAG_ALREADY_EXISTS' }>
   summary: { models: ImportCounts; families: ImportCounts; types: ImportCounts; manufacturers: ImportCounts & { merged: number }; specifications: number }
   rows: Array<{ tag: string; name: string; family: string; type: string; manufacturer: string; stages: string[]; components: string[]; referenceManufacturers?: Array<{ nombre: string; alcance: string | null; sitioWeb: string | null }> | null; specifications: Record<string, string>; action: 'create' | 'update' }>
 }

@@ -92,7 +92,7 @@ describe('Redes de la importación Excel', () => {
     expect(screen.getByRole('button', { name: 'Importar al catálogo' })).toBeEnabled()
   })
 
-  it.each([{ references: null, text: /Se conservan las referencias actuales/ }, { references: [], text: /Se vaciarán las referencias anteriores/ }])('explica la conservación o vaciado de referencias ($references)', async ({ references, text }) => {
+  it.each([{ references: null, text: /El archivo no incluye la hoja de fabricantes de referencia/ }, { references: [], text: /Sin fabricantes de referencia informados/ }])('explica la ausencia de referencias ($references)', async ({ references, text }) => {
     const p = preview([NETWORKS[0]])
     const extended = { ...p, rows: [{ ...p.rows[0], components: [], referenceManufacturers: references }] }
     mockApi({ 'GET /networks/catalog': { body: NETWORKS }, 'POST /catalog/imports/preview': { body: extended } })
@@ -146,7 +146,7 @@ describe('Redes de la importación Excel', () => {
       ...preview([NETWORKS[0]]),
       issues: [
         { sheet: 'Listado maestro', row: 150, message: 'TEST-01 no tiene especificaciones', code: 'MISSING_SPECIFICATIONS' },
-        { sheet: 'Listado maestro', row: 151, message: 'TAG repetido: TEST-01' },
+        { sheet: 'Listado maestro', row: 151, message: 'El TAG TEST-01 ya existe en el catálogo. Redes actuales: Potencia Eléctrica (FUR-PTE), Laboratorios (FUR-LAB). No se permite importarlo ni sobrescribirlo.', code: 'TAG_ALREADY_EXISTS' },
       ],
     }
     mockApi({ 'GET /networks/catalog': { body: NETWORKS }, 'POST /catalog/imports/preview': { body: p } })
@@ -156,7 +156,8 @@ describe('Redes de la importación Excel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Analizar Excel' }))
     await userEvent.click(await screen.findByRole('checkbox', { name: /Importar también/ }))
     expect(screen.getByRole('button', { name: 'Importar al catálogo' })).toBeDisabled()
-    expect(screen.getByRole('alert')).toHaveTextContent('TAG repetido: TEST-01')
+    expect(screen.getByRole('alert')).toHaveTextContent('El TAG TEST-01 ya existe')
+    expect(screen.getByRole('alert')).toHaveTextContent('Potencia Eléctrica (FUR-PTE), Laboratorios (FUR-LAB)')
     await userEvent.click(screen.getByRole('button', { name: 'Analizar Excel' }))
     expect(await screen.findByRole('checkbox', { name: /Importar también/ })).not.toBeChecked()
   })
