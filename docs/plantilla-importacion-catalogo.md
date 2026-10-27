@@ -1,6 +1,6 @@
 # Plantilla de importación del catálogo
 
-En **Catálogo de activos → Importar Excel → Descargar plantilla Excel** se descarga `public/templates/plantilla-importacion-catalogo.xlsx`. Es un archivo estático incluido en el despliegue del admin. La lectura de varios componentes y fabricantes de referencia requiere desplegar la API actualizada antes o junto con el admin. No hay cambios de esquema ni migraciones de base de datos.
+En **Catálogo de activos → Importar Excel → Descargar plantilla Excel** se descarga `public/templates/plantilla-importacion-catalogo.xlsx`. Es un archivo estático incluido en el despliegue del admin. La lectura de varios componentes y fabricantes de referencia requiere desplegar la API actualizada antes o junto con el admin y utiliza datos JSON existentes. La identidad del modelo por tipo, fabricante, nombre y etapa requiere la migración de API `0034_model_stage_identity.sql`; `start:prod` la ejecuta al arrancar.
 
 La plantilla tiene seis hojas: **Instrucciones**, **Listado maestro**, **Categorías N4**, **Características**, **Especificaciones** y **Fabricantes de referencia**. Mantiene las 54 familias del listado original, con sus códigos como texto para conservar los ceros iniciales. Las hojas de carga están vacías, sin activos de ejemplo que puedan importarse por accidente. Los ejemplos están únicamente en Instrucciones y el importador los ignora. No contiene fórmulas, imágenes ni vínculos a otros libros.
 
@@ -15,7 +15,7 @@ Una fila por modelo, con estas columnas:
 | Columna | Uso |
 | --- | --- |
 | TAG ACTIVO | Identificador del modelo. Repetir un TAG existente actualiza ese modelo. |
-| Nombre | Nombre del modelo. |
+| Nombre | Nombre del modelo. Puede coincidir con otro del mismo tipo y fabricante si sus etapas son distintas. |
 | Código CA | Identificador de familia, presente en Categorías N4. Incluye una lista desplegable de los códigos originales. |
 | Categoría N4 | Encabezado requerido por el importador. El nombre canónico de la familia se obtiene de Categorías N4 mediante Código CA. |
 | Tipo | Tipo de activo dentro de la familia. |
@@ -49,6 +49,8 @@ Los archivos anteriores que no tienen esta hoja siguen siendo válidos y conserv
 ## Antes de importar
 
 Selecciona las redes transversales en el diálogo del admin: no se leen del archivo. Analiza el Excel y revisa las altas y actualizaciones. Abre **Ver componentes, especificaciones y fabricantes** para revisar todos los datos de cada TAG y si se conservarán o vaciarán sus referencias. La carga admite hasta 5 MB, 2.000 modelos y 25.000 filas por hoja de datos. Los TAG de componentes, especificaciones y referencias deben aparecer en Listado maestro. Las especificaciones, componentes y redes de los TAG incluidos reemplazan los datos anteriores; se conservan sus fotos.
+
+Se permite que dos TAG compartan tipo, fabricante y nombre cuando pertenecen a etapas diferentes. Si comparten también una etapa efectiva, se bloquea la importación e indica las filas reales, ambos TAG y la etapa del conflicto. El TAG sigue siendo único en todo el catálogo y repetirlo actualiza su modelo, incluso si cambia de etapa.
 
 ## Mantenimiento
 
