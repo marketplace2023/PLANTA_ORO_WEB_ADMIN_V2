@@ -54,6 +54,7 @@ describe('Redes de la importación Excel', () => {
     expect(JSON.parse(String(applied.get('networkCodes')))).toEqual(['FUR-IOT', 'FUR-PTE'])
     expect(applied.get('fingerprint')).toBe('a'.repeat(64))
     expect(applied.get('allowMissingSpecifications')).toBe('false')
+    expect(applied.get('allowDuplicateModels')).toBe('false')
     expect(onImported).toHaveBeenCalledOnce()
   })
 
@@ -160,5 +161,88 @@ describe('Redes de la importación Excel', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Potencia Eléctrica (FUR-PTE), Laboratorios (FUR-LAB)')
     await userEvent.click(screen.getByRole('button', { name: 'Analizar Excel' }))
     expect(await screen.findByRole('checkbox', { name: /Importar también/ })).not.toBeChecked()
+  })
+
+  it('ofrece aceptar duplicados después del análisis y envía la aceptación al importar', async () => {
+    const p = { ...preview([NETWORKS[0]]), issues: [{ sheet: 'Listado maestro', row: 3, message: 'Dos cámaras comparten tipo, fabricante, nombre y etapa, con TAG distintos.', code: 'DUPLICATE_MODEL_IDENTITY' }] }
+    const mock = mockApi({
+      'GET /networks/catalog': { body: NETWORKS },
+      'POST /catalog/imports/preview': { body: p },
+      'POST /catalog/imports': { body: { ...p, imported: 2 } },
+    })
+    renderWithProviders(<CatalogImportDialog onClose={vi.fn()} onImported={vi.fn()} />)
+    expect(screen.queryByRole('checkbox', { name: /Importar modelos duplicados/ })).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Procesos' }))
+    await userEvent.upload(screen.getByLabelText(/Archivo Excel/), file())
+    await userEvent.click(screen.getByRole('button', { name: 'Analizar Excel' }))
+    const consent = await screen.findByRole('checkbox', { name: 'Importar modelos duplicados con TAG distintos' })
+    expect(consent).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'Importar al catálogo' })).toBeDisabled()
+    expect(screen.queryByText(/Archivo válido:/)).not.toBeInTheDocument()
+    await userEvent.click(consent)
+    expect(screen.getByRole('button', { name: 'Importar al catálogo' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Importar al catálogo' }))
+    await screen.findByText('Importación completada')
+    expect(screen.getByText(/Se importaron los modelos duplicados aceptados/)).toBeInTheDocument()
+    const applied = mock.calls.find(call => call.path === '/catalog/imports')?.init.body as FormData
+    expect(applied.get('allowDuplicateModels')).toBe('true')
+    expect(applied.get('allowMissingSpecifications')).toBe('false')
+  })
+
+  it.each([undefined, 'TAG_ALREADY_EXISTS'])('aceptar duplicados no omite otros errores (%s)', async code => {
+    const p = { ...preview([NETWORKS[0]]), issues: [
+      { sheet: 'Listado maestro', row: 3, message: 'Coincidencia entre dos modelos', code: 'DUPLICATE_MODEL_IDENTITY' },
+      { sheet: 'Listado maestro', row: 4, message: 'TAG no permitido', code },
+    ] }
+    const mock = mockApi({ 'GET /networks/catalog': { body: NETWORKS }, 'POST /catalog/imports/preview': { body: p } })
+    renderWithProviders(<CatalogImportDialog onClose={vi.fn()} onImported={vi.fn()} />)
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Procesos' }))
+    await userEvent.upload(screen.getByLabelText(/Archivo Excel/), file())
+    await userEvent.click(screen.getByRole('button', { name: 'Analizar Excel' }))
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Importar modelos duplicados/ }))
+    expect(screen.getByRole('button', { name: 'Importar al catálogo' })).toBeDisabled()
+    expect(screen.getByRole('alert')).toHaveTextContent('TAG no permitido')
+    expect(mock.calls.filter(call => call.path === '/catalog/imports')).toHaveLength(0)
+  })
+
+  it('reinicia la aceptación de duplicados al analizar, cambiar las redes o cambiar el archivo', async () => {
+    const p = { ...preview([NETWORKS[0]]), issues: [{ sheet: 'Listado maestro', row: 3, message: 'Coincidencia', code: 'DUPLICATE_MODEL_IDENTITY' }] }
+    mockApi({ 'GET /networks/catalog': { body: NETWORKS }, 'POST /catalog/imports/preview': { body: p } })
+    renderWithProviders(<CatalogImportDialog onClose={vi.fn()} onImported={vi.fn()} />)
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Procesos' }))
+    await userEvent.upload(screen.getByLabelText(/Archivo Excel/), file())
+    for (const reset of ['analyze', 'networks', 'file']) {
+      await userEvent.click(screen.getByRole('button', { name: 'Analizar Excel' }))
+      const consent = await screen.findByRole('checkbox', { name: /Importar modelos duplicados/ })
+      expect(consent).not.toBeChecked()
+      await userEvent.click(consent)
+      if (reset === 'analyze') {
+        await userEvent.click(screen.getByRole('button', { name: 'Analizar Excel' }))
+        expect(await screen.findByRole('checkbox', { name: /Importar modelos duplicados/ })).not.toBeChecked()
+      }
+      if (reset === 'networks') await userEvent.click(screen.getByRole('checkbox', { name: 'Potencia Eléctrica' }))
+      if (reset === 'file') await userEvent.upload(screen.getByLabelText(/Archivo Excel/), file())
+      expect(screen.getByRole('button', { name: 'Importar al catálogo' })).toBeDisabled()
+    }
+  })
+
+  it('exige ambas aceptaciones si hay duplicados y modelos sin especificaciones', async () => {
+    const p = { ...preview([NETWORKS[0]]), issues: [
+      { sheet: 'Listado maestro', row: 3, message: 'Coincidencia', code: 'DUPLICATE_MODEL_IDENTITY' },
+      { sheet: 'Listado maestro', row: 3, message: 'Sin especificaciones', code: 'MISSING_SPECIFICATIONS' },
+    ] }
+    mockApi({ 'GET /networks/catalog': { body: NETWORKS }, 'POST /catalog/imports/preview': { body: p } })
+    renderWithProviders(<CatalogImportDialog onClose={vi.fn()} onImported={vi.fn()} />)
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Procesos' }))
+    await userEvent.upload(screen.getByLabelText(/Archivo Excel/), file())
+    await userEvent.click(screen.getByRole('button', { name: 'Analizar Excel' }))
+    const duplicates = await screen.findByRole('checkbox', { name: /Importar modelos duplicados/ })
+    const specifications = screen.getByRole('checkbox', { name: /Importar también los modelos sin especificaciones/ })
+    await userEvent.click(duplicates)
+    expect(screen.getByRole('button', { name: 'Importar al catálogo' })).toBeDisabled()
+    await userEvent.click(specifications)
+    expect(screen.getByRole('button', { name: 'Importar al catálogo' })).toBeEnabled()
+    await userEvent.click(duplicates)
+    expect(screen.getByRole('button', { name: 'Importar al catálogo' })).toBeDisabled()
   })
 })

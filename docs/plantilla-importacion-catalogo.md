@@ -52,7 +52,9 @@ Selecciona las redes transversales en el diálogo del admin: no se leen del arch
 
 Si un TAG del listado ya existe en el catálogo, se bloquea **toda la carga sin guardar cambios**. El error muestra su fila, TAG y todas sus redes actuales (nombre y código), o «sin redes asignadas». No importa que selecciones otras redes o cambies su nombre o etapa. La opción para importar sin especificaciones no omite este error. El sistema vuelve a comprobarlo al confirmar. Retira del Excel esos TAG y sus detalles y analiza nuevamente. La guía descargable explica la misma regla; el bloqueo requiere desplegar la API actualizada, sin una migración adicional.
 
-Se permite que dos TAG nuevos compartan tipo, fabricante y nombre cuando pertenecen a etapas diferentes. Si comparten también una etapa efectiva, se bloquea la importación e indica las filas reales, ambos TAG y la etapa del conflicto. Se mantiene la vinculación de modelos anteriores sin TAG por esa combinación.
+Se permite que dos TAG nuevos compartan tipo, fabricante y nombre cuando pertenecen a etapas diferentes. Si comparten también una etapa efectiva, el análisis indica las filas reales, ambos TAG y la etapa del conflicto. Después de revisarlos, puedes marcar **Importar modelos duplicados con TAG distintos**. Por defecto está desmarcado y bloquea la importación. Al aceptarlo, cada TAG nuevo tendrá su modelo y ficha independientes, sin renombrar ni sobrescribir modelos existentes. La opción no permite repetir TAG dentro del listado ni usar un TAG ya registrado. Si también faltan especificaciones, ambas opciones deben aceptarse por separado. Al analizar nuevamente, cambiar el archivo o las redes, se reinician las aceptaciones.
+
+Esta opción requiere desplegar la API con la migración `0035_import_duplicate_models.sql`; `start:prod` la aplica al arrancar. Los duplicados aceptados se conservan como excepciones por modelo y no bloquean cargas posteriores de otros activos. Cada nueva coincidencia vuelve a requerir aceptación. Se mantiene la vinculación de modelos anteriores sin TAG por esa combinación.
 
 ## Mantenimiento
 

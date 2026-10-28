@@ -15,18 +15,21 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
   const [error, setError] = useState<string | null>(null)
   const [networkCodes, setNetworkCodes] = useState<string[]>([])
   const [allowMissingSpecifications, setAllowMissingSpecifications] = useState(false)
+  const [allowDuplicateModels, setAllowDuplicateModels] = useState(false)
   const networks = useNetworkMasters()
   const analyze = usePreviewCatalogImport()
   const apply = useApplyCatalogImport()
   const busy = analyze.isPending || apply.isPending
   const validNetworks = networks.isSuccess && networkCodes.length > 0 && networkCodes.every(code => networks.data.some(n => n.code === code))
   const missingSpecifications = preview?.issues.filter(i => i.code === 'MISSING_SPECIFICATIONS') ?? []
-  const otherIssues = preview?.issues.filter(i => i.code !== 'MISSING_SPECIFICATIONS') ?? []
-  const canImport = !!preview && otherIssues.length === 0 && (missingSpecifications.length === 0 || allowMissingSpecifications)
+  const duplicateModels = preview?.issues.filter(i => i.code === 'DUPLICATE_MODEL_IDENTITY') ?? []
+  const otherIssues = preview?.issues.filter(i => i.code !== 'MISSING_SPECIFICATIONS' && i.code !== 'DUPLICATE_MODEL_IDENTITY') ?? []
+  const canImport = !!preview && otherIssues.length === 0 && (missingSpecifications.length === 0 || allowMissingSpecifications) && (duplicateModels.length === 0 || allowDuplicateModels)
   async function inspect() {
     if (!file || !validNetworks) return
     setPreview(null)
     setAllowMissingSpecifications(false)
+    setAllowDuplicateModels(false)
     setError(null)
     try { setPreview(await analyze.mutateAsync({ file, networkCodes })) }
     catch (e) { setError(errorMessage(e) ?? 'No se pudo analizar el Excel') }
@@ -35,7 +38,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
     if (!file || !preview || !canImport || !validNetworks) return
     setError(null)
     try {
-      const saved = await apply.mutateAsync({ file, fingerprint: preview.fingerprint, networkCodes, allowMissingSpecifications })
+      const saved = await apply.mutateAsync({ file, fingerprint: preview.fingerprint, networkCodes, allowMissingSpecifications, allowDuplicateModels })
       setResult(saved)
       setPreview(null)
       toast.success(`${saved.imported} modelos importados al catálogo`)
@@ -55,6 +58,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
             <p>{result.summary.models.create} modelos creados y {result.summary.models.update} actualizados. {result.summary.specifications} especificaciones asignadas por TAG.</p>
             <p>Redes asignadas a los modelos: {result.networks.map(n => n.name).join(' · ')}.</p>
             {result.issues.some(i => i.code === 'MISSING_SPECIFICATIONS') && <p>{result.issues.filter(i => i.code === 'MISSING_SPECIFICATIONS').length} modelos importados con especificaciones técnicas vacías.</p>}
+            {result.issues.some(i => i.code === 'DUPLICATE_MODEL_IDENTITY') && <p>Se importaron los modelos duplicados aceptados, cada uno con su propio TAG y ficha.</p>}
             {result.summary.manufacturers.merged > 0 && <p>{result.summary.manufacturers.merged} variantes de fabricantes unificadas.</p>}
             <p className="text-sm text-muted-foreground">Los modelos ya están disponibles en el catálogo y sus fichas.</p>
           </div>
@@ -78,7 +82,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
             ) : (
               <fieldset disabled={busy} className="min-w-0">
                 <CheckGroup legend="Redes transversales de los modelos" options={(networks.data ?? []).map(n => ({ value: n.code, label: n.name }))} value={networkCodes} onChange={codes => {
-                  setNetworkCodes(codes); setPreview(null); setAllowMissingSpecifications(false); setError(null)
+                  setNetworkCodes(codes); setPreview(null); setAllowMissingSpecifications(false); setAllowDuplicateModels(false); setError(null)
                 }} help="Selecciona al menos una red. Se aplicarán a los modelos importados. Un TAG existente no puede importarse, aunque elijas otra red." />
                 {networks.data?.length === 0 && <p className="mt-2 text-sm text-muted-foreground">Primero crea una red en Etapas y redes.</p>}
               </fieldset>
@@ -88,7 +92,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
                 <label htmlFor="catalog-master-file" className="mb-1 block text-sm font-medium">Archivo Excel (.xlsx, máximo 5 MB)</label>
                 <Input id="catalog-master-file" type="file" accept=".xlsx" disabled={busy} onChange={e => {
                   const selected = e.target.files?.[0] ?? null
-                  setPreview(null); setAllowMissingSpecifications(false); setError(null)
+                  setPreview(null); setAllowMissingSpecifications(false); setAllowDuplicateModels(false); setError(null)
                   if (selected && (!selected.name.toLowerCase().endsWith('.xlsx') || selected.size > 5 * 1024 * 1024)) {
                     setFile(null); setError('Selecciona un archivo .xlsx de hasta 5 MB')
                   } else setFile(selected)
@@ -106,7 +110,18 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
                     <p className="mb-2 font-semibold">Corrige {otherIssues.length} errores antes de importar. No se ha guardado ningún cambio.</p>
                     <ul className="list-disc space-y-1 pl-5">{otherIssues.map((i, n) => <li key={n}>{i.sheet}, fila {i.row}: {i.message}</li>)}</ul>
                   </div>
-                ) : missingSpecifications.length === 0 && <p role="status" className="text-sm font-medium text-fur-green-600">Archivo válido: {preview.rows.length} modelos y {preview.summary.specifications} especificaciones.</p>}
+                ) : missingSpecifications.length === 0 && duplicateModels.length === 0 && <p role="status" className="text-sm font-medium text-fur-green-600">Archivo válido: {preview.rows.length} modelos y {preview.summary.specifications} especificaciones.</p>}
+                {duplicateModels.length > 0 && (
+                  <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    <p className="font-semibold">{duplicateModels.length} coincidencias entre modelos con TAG distintos</p>
+                    <ul className="max-h-48 list-disc space-y-1 overflow-y-auto pl-5">{duplicateModels.map((i, n) => <li key={n}>{i.sheet}, fila {i.row}: {i.message}</li>)}</ul>
+                    <label className="flex items-start gap-2 font-medium">
+                      <input type="checkbox" className="mt-0.5 size-4 shrink-0 accent-[var(--fur-navy-900)]" disabled={busy} checked={allowDuplicateModels} onChange={e => { setAllowDuplicateModels(e.target.checked); setError(null) }} />
+                      Importar modelos duplicados con TAG distintos
+                    </label>
+                    <p>Permite repetir tipo, fabricante, nombre y etapa. Cada TAG nuevo tendrá su propio modelo, especificaciones, componentes e imagen. No permite TAG repetidos en el Excel ni sobrescribir TAG existentes.</p>
+                  </div>
+                )}
                 {missingSpecifications.length > 0 && (
                   <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                     <p className="font-semibold">{missingSpecifications.length} modelos sin especificaciones técnicas</p>

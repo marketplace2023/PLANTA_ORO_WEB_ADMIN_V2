@@ -68,14 +68,14 @@ export const useHealth = () => useQuery({ queryKey: ['health'], queryFn: () => a
 export type CatalogImportPreview = {
   fingerprint: string
   networks: Array<{ code: string; name: string }>
-  issues: Array<{ sheet: string; row: number; message: string; code?: 'MISSING_SPECIFICATIONS' | 'TAG_ALREADY_EXISTS' }>
+  issues: Array<{ sheet: string; row: number; message: string; code?: 'MISSING_SPECIFICATIONS' | 'TAG_ALREADY_EXISTS' | 'DUPLICATE_MODEL_IDENTITY' }>
   summary: { models: ImportCounts; families: ImportCounts; types: ImportCounts; manufacturers: ImportCounts & { merged: number }; specifications: number }
   rows: Array<{ tag: string; name: string; family: string; type: string; manufacturer: string; stages: string[]; components: string[]; referenceManufacturers?: Array<{ nombre: string; alcance: string | null; sitioWeb: string | null }> | null; specifications: Record<string, string>; action: 'create' | 'update' }>
 }
 type ImportCounts = { create: number; update: number }
 export type CatalogImportResult = CatalogImportPreview & { imported: number }
 export const usePreviewCatalogImport = () => useMutation({ mutationFn: ({ file, networkCodes }: { file: File; networkCodes: string[] }) => api<CatalogImportPreview>('/catalog/imports/preview', { method: 'POST', ...formBody({ networkCodes: JSON.stringify(networkCodes) }, file) }) })
-export const useApplyCatalogImport = () => useCatalogMutation(({ file, fingerprint, networkCodes, allowMissingSpecifications = false }: { file: File; fingerprint: string; networkCodes: string[]; allowMissingSpecifications?: boolean }) => api<CatalogImportResult>('/catalog/imports', { method: 'POST', ...formBody({ fingerprint, networkCodes: JSON.stringify(networkCodes), allowMissingSpecifications: String(allowMissingSpecifications) }, file) }))
+export const useApplyCatalogImport = () => useCatalogMutation(({ file, fingerprint, networkCodes, allowMissingSpecifications = false, allowDuplicateModels = false }: { file: File; fingerprint: string; networkCodes: string[]; allowMissingSpecifications?: boolean; allowDuplicateModels?: boolean }) => api<CatalogImportResult>('/catalog/imports', { method: 'POST', ...formBody({ fingerprint, networkCodes: JSON.stringify(networkCodes), allowMissingSpecifications: String(allowMissingSpecifications), allowDuplicateModels: String(allowDuplicateModels) }, file) }))
 
 export type CatalogDeletePreview = {
   fingerprint: string
