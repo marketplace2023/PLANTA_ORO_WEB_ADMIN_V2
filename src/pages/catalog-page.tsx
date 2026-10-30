@@ -12,11 +12,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   useCreateFamily,
-  useCreateManufacturer,
   useCreateModel,
   useCreateType,
   useDeleteFamily,
-  useDeleteManufacturer,
   useDeleteModel,
   useDeleteType,
   useFamilies,
@@ -26,16 +24,15 @@ import {
   useStageMasters,
   useTypes,
   useUpdateFamily,
-  useUpdateManufacturer,
   useUpdateModel,
   useRemoveModelImage,
   useUpdateType,
   useUploadModelImage,
   type AssetType,
   type Family,
-  type Manufacturer,
   type Model,
 } from '@/features/catalog/use-catalog'
+import { ReferenceManufacturersFields, type ReferenceManufacturer } from '@/components/reference-manufacturers-fields'
 import { cn } from '@/lib/utils'
 import { apiUrl } from '@/lib/api'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
@@ -196,61 +193,17 @@ function TypesTab() {
 
 function ManufacturersTab() {
   const q = useManufacturers()
-  const create = useCreateManufacturer()
-  const update = useUpdateManufacturer()
-  const del = useDeleteManufacturer()
-  const [removing, setRemoving] = useState<Manufacturer | null>(null)
-  const [form, setForm] = useState<{ row?: Manufacturer } | null>(null)
-  const editing = form?.row
-  const m = editing ? update : create
-  const fields: Field[] = [
-    { name: 'name', label: 'Nombre', required: true },
-    { name: 'countryCode', label: 'País (2 letras)', placeholder: 'SE' },
-    { name: 'website', label: 'Sitio web', type: 'url', placeholder: 'https://…', wide: true },
-  ]
-  const submit = (v: Values) => {
-    const done = { onSuccess: () => { toast.success(editing ? 'Fabricante actualizado' : 'Fabricante creado'); setForm(null) } }
-    if (editing) update.mutate({ id: editing.id, name: String(v.name).trim(), countryCode: nul(v.countryCode), website: nul(v.website) }, done)
-    else create.mutate({ name: String(v.name).trim(), countryCode: opt(v.countryCode), website: opt(v.website) }, done)
-  }
   return (
-    <>
-      <Section title="Fabricantes" subtitle="Marcas de los modelos del catálogo." addLabel="Nuevo fabricante" onAdd={() => { create.reset(); update.reset(); setForm({}) }}>
-        {q.isLoading ? <div className="p-4"><Loading rows={5} /></div> : q.isError ? <Failed what="los fabricantes" onRetry={() => void q.refetch()} /> : q.data && q.data.length > 0 ? (
-          <DataTable head={['Fabricante', 'País', { label: '', right: true }]}>
-            {q.data.map((f) => (
-              <tr key={f.id}>
-                <td className={`${td} font-medium text-fur-navy-900`}>{f.name}</td>
-                <td className={td}>{f.countryCode ?? '—'}</td>
-                <td className={`${td} text-right`}>
-                  <div className="flex justify-end gap-1.5">
-                    <Button size="xs" variant="secondary" aria-label={`Editar ${f.name}`} onClick={() => { update.reset(); setForm({ row: f }) }}><Pencil /> Editar</Button>
-                    <Button size="xs" variant="outline" aria-label={`Eliminar ${f.name}`} onClick={() => { del.reset(); setRemoving(f) }}><Trash2 /> Eliminar</Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </DataTable>
-        ) : <Empty>No hay fabricantes.</Empty>}
-      </Section>
-      {removing && (
-        <ConfirmDeleteDialog
-          title={`Eliminar el fabricante ${removing.name}`}
-          description="Se elimina del catálogo. Solo es posible si ningún modelo ni activo lo usa."
-          pending={del.isPending}
-          error={errorMessage(del.error)}
-          onConfirm={() => del.mutate(removing.id, { onSuccess: () => { toast.success('Fabricante eliminado'); setRemoving(null) } })}
-          onClose={() => setRemoving(null)}
-        />
-      )}
-      {form && <FormDialog title={editing ? `Editar ${editing.name}` : 'Nuevo fabricante'} fields={fields} initial={editing ? { name: editing.name, countryCode: editing.countryCode ?? '' } : {}} busy={m.isPending} error={errorMessage(m.error)} onClose={() => setForm(null)} onSubmit={submit} />}
-    </>
+    <Panel title="Fabricantes de referencia" subtitle="Se obtienen de las fichas de los modelos. Edita sus referencias desde Modelos o impórtalas mediante Excel." flush>
+      {q.isLoading ? <Loading /> : q.isError ? <Failed what="las referencias" onRetry={() => void q.refetch()} /> : q.data?.length ? (
+        <DataTable head={['Fabricante']}>{q.data.map(m => <tr key={m.id}><td className={td}>{m.name}</td></tr>)}</DataTable>
+      ) : <Empty>No hay fabricantes de referencia asignados.</Empty>}
+    </Panel>
   )
 }
 
 function ModelsTab() {
   const types = useTypes()
-  const manufacturers = useManufacturers()
   const families = useFamilies()
   const create = useCreateModel()
   const update = useUpdateModel()
@@ -271,6 +224,7 @@ function ModelsTab() {
   const stageMasters = useStageMasters()
   const networkMasters = useNetworkMasters()
   const [networkCodes, setNetworkCodes] = useState<string[]>([])
+  const [references, setReferences] = useState<ReferenceManufacturer[]>([])
   /** Etapas elegidas para el modelo, con el tipo al que corresponden (al cambiar de tipo se vuelve a empezar). */
   const [stageSel, setStageSel] = useState<{ typeCode: string; codes: string[] } | null>(null)
   const editing = form?.row
@@ -280,17 +234,15 @@ function ModelsTab() {
     const possible = types.data?.find((t) => t.code === typeCode)?.stageCodes ?? []
     return { possible, selected: stageSel && stageSel.typeCode === typeCode ? stageSel.codes.filter((c) => possible.includes(c)) : possible }
   }
-  const mfOptions = (manufacturers.data ?? []).map((f) => ({ value: f.id, label: f.name }))
+
   const fields: Field[] = editing
     ? [
         { name: 'modelName', label: 'Modelo', required: true, wide: true },
-        { name: 'manufacturerId', label: 'Fabricante', type: 'select', options: mfOptions },
         { name: 'status', label: 'Estado', type: 'select', required: true, options: [{ value: 'ACTIVE', label: 'Activo' }, { value: 'INACTIVE', label: 'Inactivo' }], hint: 'Desactívalo si hay activos que lo usan; si está repetido y nadie lo usa, elimínalo desde la tabla.' },
       ]
     : [
         { name: 'typeCode', label: 'Tipo de activo', type: 'select', required: true, options: (types.data ?? []).map((t) => ({ value: t.code, label: `${t.familyName} · ${t.name}` })), wide: true },
         { name: 'modelName', label: 'Modelo', required: true, placeholder: 'Ej. HM 300', wide: true },
-        { name: 'manufacturerId', label: 'Fabricante', type: 'select', options: mfOptions, wide: true },
       ]
   /** Guarda el modelo y, después, aplica el cambio de foto. Si la foto falla, el modelo ya quedó guardado y se avisa. */
   async function submit(v: Values) {
@@ -299,9 +251,9 @@ function ModelsTab() {
     try {
       let id = editing?.id
       if (editing) {
-        await update.mutateAsync({ id: editing.id, modelName: String(v.modelName).trim(), manufacturerId: nul(v.manufacturerId), status: v.status as 'ACTIVE' | 'INACTIVE', stageCodes: stagesFor(editing.type.code).selected, networkCodes })
+        await update.mutateAsync({ id: editing.id, modelName: String(v.modelName).trim(), technicalData: { ...editing.technicalData, fabricantesReferencia: references }, status: v.status as 'ACTIVE' | 'INACTIVE', stageCodes: stagesFor(editing.type.code).selected, networkCodes })
       } else {
-        id = (await create.mutateAsync({ typeCode: String(v.typeCode), modelName: String(v.modelName).trim(), manufacturerId: opt(v.manufacturerId), stageCodes: stagesFor(String(v.typeCode)).selected, networkCodes })).id
+        id = (await create.mutateAsync({ typeCode: String(v.typeCode), modelName: String(v.modelName).trim(), technicalData: { fabricantesReferencia: references }, stageCodes: stagesFor(String(v.typeCode)).selected, networkCodes })).id
       }
       try {
         if (id && image.file) await uploadImage.mutateAsync({ id, file: image.file })
@@ -338,10 +290,10 @@ function ModelsTab() {
           <option value="INACTIVE">Inactivos</option>
         </select>
       </div>
-      <Section title="Modelos" subtitle="Describen qué existe; los activos de cada planta se crean a partir de un modelo." addLabel="Nuevo modelo" onAdd={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel(null); setNetworkCodes([]); setForm({}) }}>
+      <Section title="Modelos" subtitle="Describen qué existe; los activos de cada planta se crean a partir de un modelo." addLabel="Nuevo modelo" onAdd={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel(null); setNetworkCodes([]); setReferences([]); setForm({}) }}>
         {q.isLoading ? <div className="p-4"><Loading rows={6} /></div> : q.isError ? <Failed what="los modelos" onRetry={() => void q.refetch()} /> : q.data && q.data.items.length > 0 ? (
           <>
-            <DataTable head={['Foto', 'TAG / Modelo', 'Tipo', 'Etapas', 'Redes', 'Familia', 'Fabricante', 'Estado', { label: '', right: true }]}>
+            <DataTable head={['Foto', 'TAG / Modelo', 'Tipo', 'Etapas', 'Redes', 'Familia', 'Fabricantes de referencia', 'Estado', { label: '', right: true }]}>
               {q.data.items.map((r) => (
                 <tr key={r.id} className={r.status === 'INACTIVE' ? 'opacity-60' : undefined}>
                   <td className={td}>
@@ -363,12 +315,12 @@ function ModelsTab() {
                   </td>
                   <td className={`${td} text-xs`}>{r.networkCodes.length ? r.networkCodes.map(code => networkMasters.data?.find(n => n.code === code)?.name ?? code).join(' · ') : <span className="text-muted-foreground">Sin redes</span>}</td>
                   <td className={td}>{r.family.name}</td>
-                  <td className={td}>{r.manufacturer?.name ?? '—'}</td>
+                  <td className={td}>{r.referenceManufacturers?.map(ref => ref.nombre).join(', ') || '—'}</td>
                   <td className={td}><Pill label={r.status === 'ACTIVE' ? 'Activo' : 'Inactivo'} color={r.status === 'ACTIVE' ? 'var(--fur-green-500)' : 'var(--fur-steel-500)'} /></td>
                   <td className={`${td} text-right`}>
                     <div className="flex justify-end gap-1.5">
                       <Button size="xs" variant="outline" aria-label={`Datos del fabricante de ${r.modelName}`} onClick={() => setVariablesOf(r)}><ListChecks /> Datos del fabricante</Button>
-                      <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel({ typeCode: r.type.code, codes: r.stageCodes }); setNetworkCodes(r.networkCodes); setForm({ row: r }) }}><Pencil /> Editar</Button>
+                      <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel({ typeCode: r.type.code, codes: r.stageCodes }); setNetworkCodes(r.networkCodes); setReferences(r.referenceManufacturers ?? []); setForm({ row: r }) }}><Pencil /> Editar</Button>
                       <Button size="xs" variant="outline" aria-label={`Eliminar ${r.modelName}`} onClick={() => { del.reset(); setRemoving(r) }}><Trash2 /> Eliminar</Button>
                     </div>
                   </td>
@@ -400,7 +352,7 @@ function ModelsTab() {
         <FormDialog
           title={editing ? `Editar ${editing.modelName}` : 'Nuevo modelo'}
           fields={fields}
-          initial={editing ? { modelName: editing.modelName, manufacturerId: editing.manufacturer?.id ?? '', status: editing.status } : {}}
+          initial={editing ? { modelName: editing.modelName, status: editing.status } : {}}
           busy={saving}
           error={saveError}
           extra={(v) => {
@@ -421,6 +373,7 @@ function ModelsTab() {
                     <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">El tipo aún no tiene etapas posibles. Agrégalas en la pestaña «Tipos» para poder elegir en cuáles participa este modelo.</p>
                   ))}
                 <CheckGroup legend="Redes transversales" options={(networkMasters.data ?? []).map(n => ({ value: n.code, label: n.name }))} value={networkCodes} onChange={setNetworkCodes} help="Estas redes corresponden solo a este modelo. Sin seleccionar ninguna, el modelo queda sin redes asignadas." />
+                <ReferenceManufacturersFields value={references} onChange={setReferences} />
                 <ModelImagePicker currentUrl={editing?.imageUrl ?? null} value={image} onChange={setImage} />
               </>
             )

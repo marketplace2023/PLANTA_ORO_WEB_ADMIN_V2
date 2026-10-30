@@ -6,7 +6,7 @@ import { renderWithProviders } from '@/test/render'
 import { CatalogPage } from './catalog-page'
 
 const type = { id: 't1', code: 'PUMP', name: 'Bomba', description: null, familyCode: 'PUMPS', familyName: 'Bombas', stageCodes: ['D05'] }
-const model = { id: 'm1', modelName: 'Bomba de pulpa', catalogTag: null, specifications: {}, status: 'ACTIVE', imageUrl: null, stageCodes: ['D05'], stageInherited: true, networkCodes: ['FUR-PROC'], type, family: { id: 'f1', name: 'Bombas' }, manufacturer: null }
+const model = { id: 'm1', modelName: 'Bomba de pulpa', catalogTag: null, specifications: {}, status: 'ACTIVE', imageUrl: null, stageCodes: ['D05'], stageInherited: true, networkCodes: ['FUR-PROC'], type, family: { id: 'f1', name: 'Bombas' }, technicalData: { componentes: ['Motor'], fabricantesReferencia: [{ nombre: 'WEG', alcance: null, sitioWeb: null }] }, referenceManufacturers: [{ nombre: 'WEG', alcance: null, sitioWeb: null }] }
 const setup = () => mockApi({
   'GET /catalog/assets': { body: { items: [model], total: 1, page: 1, pageSize: 20 } },
   'GET /catalog/types': { body: [type] },
@@ -45,6 +45,20 @@ describe('Redes propias del modelo', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Nuevo modelo' }))
     expect(screen.getByRole('checkbox', { name: 'Procesos' })).not.toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'Potencia Eléctrica' })).not.toBeChecked()
+  })
+
+  it('edita varias referencias y conserva el resto de la ficha sin fabricante único', async () => {
+    const mock = setup()
+    renderWithProviders(<CatalogPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Bomba de pulpa' }))
+    expect(screen.queryByRole('combobox', { name: 'Fabricante' })).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Fabricante 1' })).toHaveValue('WEG')
+    await userEvent.click(screen.getByRole('button', { name: 'Añadir fabricante de referencia' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Fabricante 2' }), 'Siemens')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    const body = JSON.parse(String(mock.calls.find(call => call.method === 'PATCH')?.init.body))
+    expect(body).not.toHaveProperty('manufacturerId')
+    expect(body.technicalData).toEqual({ componentes: ['Motor'], fabricantesReferencia: [{ nombre: 'WEG', alcance: null, sitioWeb: null }, { nombre: 'Siemens', alcance: null, sitioWeb: null }] })
   })
 
   it('el formulario de tipos conserva etapas y no permite asignar redes', async () => {

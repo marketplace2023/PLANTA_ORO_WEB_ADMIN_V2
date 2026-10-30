@@ -1,6 +1,6 @@
 # Plantilla de importación del catálogo
 
-En **Catálogo de activos → Importar Excel → Descargar plantilla Excel** se descarga `public/templates/plantilla-importacion-catalogo.xlsx`. Es un archivo estático incluido en el despliegue del admin. La lectura de varios componentes y fabricantes de referencia requiere desplegar la API actualizada antes o junto con el admin y utiliza datos JSON existentes. La identidad del modelo por tipo, fabricante, nombre y etapa requiere la migración de API `0034_model_stage_identity.sql`; `start:prod` la ejecuta al arrancar.
+En **Catálogo de activos → Importar Excel → Descargar plantilla Excel** se descarga `public/templates/plantilla-importacion-catalogo.xlsx`. Es un archivo estático incluido en el despliegue del admin. La lectura de varios componentes y fabricantes de referencia requiere desplegar la API actualizada antes o junto con el admin y utiliza datos JSON existentes. La identidad del modelo por tipo, conjunto de fabricantes de referencia, nombre y etapa requiere la migración de API `0036_reference_manufacturers.sql`; `start:prod` la ejecuta al arrancar.
 
 La plantilla tiene seis hojas: **Instrucciones**, **Listado maestro**, **Categorías N4**, **Características**, **Especificaciones** y **Fabricantes de referencia**. Mantiene las 54 familias del listado original, con sus códigos como texto para conservar los ceros iniciales. Las hojas de carga están vacías, sin activos de ejemplo que puedan importarse por accidente. Los ejemplos están únicamente en Instrucciones y el importador los ignora. No contiene fórmulas, imágenes ni vínculos a otros libros.
 
@@ -15,11 +15,11 @@ Una fila por modelo, con estas columnas:
 | Columna | Uso |
 | --- | --- |
 | TAG ACTIVO | Identificador del modelo. Debe ser nuevo en el catálogo; si ya existe, se bloquea toda la carga e indica sus redes actuales. |
-| Nombre | Nombre del modelo. Puede coincidir con otro del mismo tipo y fabricante si sus etapas son distintas. |
+| Nombre | Nombre del modelo. Puede coincidir con otro del mismo tipo y conjunto de referencias si sus etapas son distintas. |
 | Código CA | Identificador de familia, presente en Categorías N4. Incluye una lista desplegable de los códigos originales. |
 | Categoría N4 | Encabezado requerido por el importador. El nombre canónico de la familia se obtiene de Categorías N4 mediante Código CA. |
 | Tipo | Tipo de activo dentro de la familia. |
-| Fabricante / modelo | Nombre del fabricante. Se eliminan las notas entre paréntesis; usa Pendiente si se desconoce. |
+| Fabricante / modelo (solo archivos antiguos) | Se ignora. No es obligatorio y no crea ni actualiza fabricantes. La plantilla nueva ya no lo incluye. |
 | Denominación de etapa | Nombre de una etapa existente en el sistema, tal como aparece en Etapas y redes. No uses el código D01/E01 en lugar del nombre. |
 
 ### Categorías N4
@@ -38,13 +38,13 @@ Si un modelo no tiene especificaciones, no agregues filas para él en esta hoja.
 
 ### Fabricantes de referencia
 
-Contiene **TAG ACTIVO**, **Fabricante**, **Descripción** y **Sitio web**. Cada fila asocia una referencia a un modelo. Repite el TAG para agregar varios fabricantes. El nombre es obligatorio y admite hasta 160 caracteres; la descripción es opcional y admite hasta 2.000 caracteres. La web es opcional y debe ser una dirección completa `http://` o `https://` de hasta 2.048 caracteres. No se infieren datos del fabricante asignado en Listado maestro.
+Contiene **TAG ACTIVO**, **Fabricante**, **Descripción** y **Sitio web**. Cada fila asocia una referencia a un modelo. Repite el TAG para agregar varios fabricantes. El nombre es obligatorio y admite hasta 160 caracteres; la descripción es opcional y admite hasta 2.000 caracteres. La web es opcional y debe ser una dirección completa `http://` o `https://` de hasta 2.048 caracteres. Es la única fuente de fabricantes del modelo. No se infieren datos de Listado maestro.
 
 Se guardan en `technicalData.fabricantesReferencia` como nombre, alcance y sitio web. La ficha muestra las referencias con su descripción y enlace; las cards del catálogo muestran los nombres separados por coma.
 
 Si no hay filas para un TAG nuevo, se guarda sin referencias. Los archivos anteriores sin esta hoja también son válidos. Si la hoja está presente, sus cuatro encabezados son obligatorios, incluso si todas sus filas están vacías.
 
-Para modelos anteriores sin TAG que se vinculen por tipo, fabricante, nombre y etapa, se conservan las referencias existentes si falta la hoja; si está presente, se reemplazan por sus filas. Los TAG que ya existen no se pueden importar.
+Para modelos anteriores sin TAG que se vinculen por tipo, conjunto de fabricantes de referencia, nombre y etapa, se conservan las referencias existentes si falta la hoja; si está presente, se reemplazan por sus filas. Los TAG que ya existen no se pueden importar.
 
 ## Antes de importar
 
@@ -52,10 +52,23 @@ Selecciona las redes transversales en el diálogo del admin: no se leen del arch
 
 Si un TAG del listado ya existe en el catálogo, se bloquea **toda la carga sin guardar cambios**. El error muestra su fila, TAG y todas sus redes actuales (nombre y código), o «sin redes asignadas». No importa que selecciones otras redes o cambies su nombre o etapa. La opción para importar sin especificaciones no omite este error. El sistema vuelve a comprobarlo al confirmar. Retira del Excel esos TAG y sus detalles y analiza nuevamente. La guía descargable explica la misma regla; el bloqueo requiere desplegar la API actualizada, sin una migración adicional.
 
-Se permite que dos TAG nuevos compartan tipo, fabricante y nombre cuando pertenecen a etapas diferentes. Si comparten también una etapa efectiva, el análisis indica las filas reales, ambos TAG y la etapa del conflicto. Después de revisarlos, puedes marcar **Importar modelos duplicados con TAG distintos**. Por defecto está desmarcado y bloquea la importación. Al aceptarlo, cada TAG nuevo tendrá su modelo y ficha independientes, sin renombrar ni sobrescribir modelos existentes. La opción no permite repetir TAG dentro del listado ni usar un TAG ya registrado. Si también faltan especificaciones, ambas opciones deben aceptarse por separado. Al analizar nuevamente, cambiar el archivo o las redes, se reinician las aceptaciones.
+Se permite que dos TAG nuevos compartan tipo, conjunto de fabricantes de referencia y nombre cuando pertenecen a etapas diferentes. Si comparten también una etapa efectiva, el análisis indica las filas reales, ambos TAG y la etapa del conflicto. Después de revisarlos, puedes marcar **Importar modelos duplicados con TAG distintos**. Por defecto está desmarcado y bloquea la importación. Al aceptarlo, cada TAG nuevo tendrá su modelo y ficha independientes, sin renombrar ni sobrescribir modelos existentes. La opción no permite repetir TAG dentro del listado ni usar un TAG ya registrado. Si también faltan especificaciones, ambas opciones deben aceptarse por separado. Al analizar nuevamente, cambiar el archivo o las redes, se reinician las aceptaciones.
 
 Esta opción requiere desplegar la API con la migración `0035_import_duplicate_models.sql`; `start:prod` la aplica al arrancar. Los duplicados aceptados se conservan como excepciones por modelo y no bloquean cargas posteriores de otros activos. Cada nueva coincidencia vuelve a requerir aceptación. Se mantiene la vinculación de modelos anteriores sin TAG por esa combinación.
 
 ## Mantenimiento
 
 La plantilla debe mantener los encabezados definidos en `apps/api/src/modules/catalog/catalog-import.xlsx.ts` del repositorio de la API. Si cambia ese contrato, actualiza también el archivo descargable y comprueba que un libro rellenado pueda pasar por `parseMasterWorkbook`.
+
+
+## Fabricantes de referencia como fuente única (migración 0036)
+
+El modelo ya no tiene `manufacturerId` ni fabricante principal. La columna antigua `Fabricante / modelo` se ignora por completo, incluidos valores vacíos o errores de Excel. Los libros anteriores siguen siendo válidos. La plantilla nueva tiene seis columnas en Listado maestro; Denominación de etapa pasa a F. Las referencias siguen asociadas por TAG en su propia hoja.
+
+`technicalData.fabricantesReferencia` es la única fuente. El editor del modelo admite varios nombres, descripciones y webs. La lista de fabricantes del catálogo y la pestaña Fabricantes se derivan de las fichas: no muestran el antiguo maestro de marcas. Los filtros públicos ofrecen referencias de modelos activos. Mayúsculas y espacios redundantes se agrupan en una opción con ID estable; cada filtro usa una consulta EXISTS, por lo que un modelo con varias referencias aparece una sola vez, también al contar y paginar. La búsqueda por texto incluye los nombres de referencia.
+
+El control de identidad compara tipo, nombre, etapa efectiva y conjunto de nombres de referencia normalizados (sin importar su orden ni repetir nombres). Sin referencias se compara el conjunto vacío. Los TAG siguen siendo únicos y los duplicados necesitan aceptación explícita. La adopción de un modelo antiguo sin TAG conserva referencias cuando el archivo no incluye la hoja; no se adopta si hay varias coincidencias posibles.
+
+La migración `0036_reference_manufacturers.sql` elimina únicamente la relación fabricante-modelo y reconstruye las claves por referencias. Conserva IDs, TAG, especificaciones, componentes, fotos, referencias, etapas y redes. Las coincidencias históricas que afloran al retirar la marca antigua se conservan como excepciones; no se borran ni renombran modelos. La tabla antigua de fabricantes se conserva para fabricantes instalados de activos físicos; importar modelos ya no la modifica ni fusiona marcas de activos físicos.
+
+Desplegar API y frontends juntos. `start:prod` ejecuta la migración al iniciar la API. No hay que reimportar los Excel: las referencias ya guardadas pasan a alimentar los filtros automáticamente. Los filtros antiguos cuyo ID provenía del maestro de marcas deben seleccionarse de nuevo.

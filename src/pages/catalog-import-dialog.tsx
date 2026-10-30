@@ -136,17 +136,17 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead><tr className="border-b"><th className="py-2">Registros</th><th>Crear</th><th>Actualizar</th></tr></thead>
-                    <tbody>{([['Modelos', preview.summary.models], ['Familias', preview.summary.families], ['Tipos', preview.summary.types], ['Fabricantes', preview.summary.manufacturers]] as const).map(([name, count]) => (
+                    <tbody>{([['Modelos', preview.summary.models], ['Familias', preview.summary.families], ['Tipos', preview.summary.types]] as const).map(([name, count]) => (
                       <tr key={name} className="border-b border-border/50"><th className="py-1.5 font-normal">{name}</th><td>{count.create}</td><td>{count.update}</td></tr>
                     ))}</tbody>
                   </table>
                 </div>
-                <p className="text-xs text-muted-foreground">Los fabricantes usan solo el nombre fuera de paréntesis. {preview.summary.manufacturers.merged > 0 ? `Se unificarán ${preview.summary.manufacturers.merged} variantes existentes conservando sus modelos y activos asociados.` : 'Las notas entre paréntesis no crean fabricantes diferentes.'}</p>
+                <p className="text-xs text-muted-foreground">Los fabricantes se leen únicamente de Fabricantes de referencia. La antigua columna Fabricante / modelo se ignora y no crea ni modifica marcas.</p>
                 <p className="text-xs text-muted-foreground">Si algún TAG ya existe en el catálogo, se bloquea toda la carga sin guardar cambios. Retira esas filas y sus detalles del Excel y vuelve a analizar.</p>
                 <p className="text-xs text-muted-foreground">Cada TAG nuevo recibirá las especificaciones, los componentes y los fabricantes de referencia revisados aquí.</p>
                 <div className="max-h-64 overflow-auto rounded-md border border-border">
                   <table className="w-full text-left text-xs">
-                    <thead className="sticky top-0 bg-muted"><tr>{['TAG / modelo', 'Familia / tipo', 'Fabricante', 'Etapa', 'Acción'].map(h => <th className="px-3 py-2" key={h}>{h}</th>)}</tr></thead>
+                    <thead className="sticky top-0 bg-muted"><tr>{['TAG / modelo', 'Familia / tipo', 'Fabricantes de referencia', 'Etapa', 'Acción'].map(h => <th className="px-3 py-2" key={h}>{h}</th>)}</tr></thead>
                     <tbody>{preview.rows.map(r => (
                       <tr key={r.tag} className="border-t border-border align-top">
                         <td className="min-w-60 px-3 py-2"><span className="fur-code">{r.tag}</span><p className="mt-1 font-medium">{r.name}</p>
