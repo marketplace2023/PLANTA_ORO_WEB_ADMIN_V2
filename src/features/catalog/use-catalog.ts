@@ -25,7 +25,7 @@ export type NetworkMaster = {
   /** Ruta (relativa a la API) de la imagen de la red; usar con `apiUrl`. null = sin imagen. */
   layoutImageUrl: string | null
 }
-export type Family = { id: string; code: string; name: string; icon: string | null }
+export type Family = { id: string; code: string; tagCode: string; name: string; icon: string | null; description?: string | null }
 export type AssetType = { id: string; code: string; name: string; description: string | null; familyCode: string; familyName: string; stageCodes: string[] }
 export type Manufacturer = { id: string; name: string; countryCode: string | null }
 export type Model = {
@@ -120,8 +120,8 @@ function useCatalogMutation<V, T = unknown>(fn: (v: V) => Promise<T>) {
 }
 const send = <T = unknown>(method: 'POST' | 'PATCH', path: string, body: unknown) => api<T>(path, { method, ...jsonBody(body) })
 
-export const useCreateFamily = () => useCatalogMutation((v: { code: string; name: string; description?: string; icon?: string }) => send('POST', '/catalog/families', v))
-export const useUpdateFamily = () => useCatalogMutation(({ id, ...v }: { id: string; name?: string; description?: string | null; icon?: string | null }) => send('PATCH', `/catalog/families/${id}`, v))
+export const useCreateFamily = () => useCatalogMutation((v: { code: string; tagCode: string; name: string; description?: string; icon?: string }) => send('POST', '/catalog/families', v))
+export const useUpdateFamily = () => useCatalogMutation(({ id, ...v }: { id: string; tagCode?: string; name?: string; description?: string | null; icon?: string | null }) => send('PATCH', `/catalog/families/${id}`, v))
 export const useCreateType = () => useCatalogMutation((v: { familyCode: string; code: string; name: string; description?: string; stageCodes?: string[] }) => send('POST', '/catalog/types', v))
 export const useUpdateType = () => useCatalogMutation(({ id, ...v }: { id: string; name?: string; familyCode?: string; description?: string | null; stageCodes?: string[] }) => send('PATCH', `/catalog/types/${id}`, v))
 export const useCreateManufacturer = () => useCatalogMutation((v: { name: string; countryCode?: string; website?: string }) => send('POST', '/catalog/manufacturers', v))

@@ -65,24 +65,26 @@ function FamiliesTab() {
   const editing = form?.row
   const m = editing ? update : create
   const fields: Field[] = [
-    { name: 'code', label: 'Código', required: true, disabled: !!editing, placeholder: 'ROTATING', hint: 'Mayúsculas, números y guion bajo. No se puede cambiar.' },
+    { name: 'tagCode', label: 'Código TAG', required: true, placeholder: 'MOT', hint: 'Único. De 3 a 12 letras o números, empezando por una letra. Cambiarlo solo afecta a futuras altas de activos.' },
+    { name: 'code', label: 'Código de integración', required: true, disabled: !!editing, placeholder: 'ROTATING', hint: 'Mayúsculas, números y guion bajo. No se puede cambiar.' },
     { name: 'name', label: 'Nombre', required: true },
     { name: 'icon', label: 'Icono', placeholder: 'cog', hint: 'Nombre corto del icono (opcional).' },
     { name: 'description', label: 'Descripción', type: 'textarea' },
   ]
   const submit = (v: Values) => {
     const done = { onSuccess: () => { toast.success(editing ? 'Familia actualizada' : 'Familia creada'); setForm(null) } }
-    if (editing) update.mutate({ id: editing.id, name: String(v.name).trim(), icon: nul(v.icon), description: nul(v.description) }, done)
-    else create.mutate({ code: upper(v.code), name: String(v.name).trim(), icon: opt(v.icon), description: opt(v.description) }, done)
+    if (editing) update.mutate({ id: editing.id, tagCode: upper(v.tagCode), name: String(v.name).trim(), icon: nul(v.icon), description: nul(v.description) }, done)
+    else create.mutate({ code: upper(v.code), tagCode: upper(v.tagCode), name: String(v.name).trim(), icon: opt(v.icon), description: opt(v.description) }, done)
   }
   return (
     <>
       <Section title="Familias de activos" subtitle="Agrupan los tipos (rotativos, eléctricos, instrumentación…)." addLabel="Nueva familia" onAdd={() => { create.reset(); update.reset(); setForm({}) }}>
         {q.isLoading ? <div className="p-4"><Loading rows={5} /></div> : q.isError ? <Failed what="las familias" onRetry={() => void q.refetch()} /> : q.data && q.data.length > 0 ? (
-          <DataTable head={['Código', 'Nombre', 'Icono', { label: '', right: true }]}>
+          <DataTable head={['Código TAG', 'Código de integración', 'Nombre', 'Icono', { label: '', right: true }]}>
             {q.data.map((f) => (
               <tr key={f.id}>
-                <td className={`${td} fur-code text-xs`}>{f.code}</td>
+                <td className={`${td} fur-code font-semibold text-fur-navy-900`}>{f.tagCode ?? '—'}</td>
+                <td className={`${td} fur-code text-xs text-muted-foreground`}>{f.code}</td>
                 <td className={`${td} font-medium text-fur-navy-900`}>{f.name}</td>
                 <td className={td}>{f.icon ?? '—'}</td>
                 <td className={`${td} text-right`}>
@@ -106,7 +108,7 @@ function FamiliesTab() {
           onClose={() => setRemoving(null)}
         />
       )}
-      {form && <FormDialog title={editing ? `Editar familia ${editing.code}` : 'Nueva familia'} fields={fields} initial={editing ? { code: editing.code, name: editing.name, icon: editing.icon ?? '' } : {}} busy={m.isPending} error={errorMessage(m.error)} onClose={() => setForm(null)} onSubmit={submit} />}
+      {form && <FormDialog title={editing ? `Editar familia ${editing.code}` : 'Nueva familia'} fields={fields} initial={editing ? { code: editing.code, tagCode: editing.tagCode ?? '', name: editing.name, icon: editing.icon ?? '', description: editing.description ?? '' } : {}} busy={m.isPending} error={errorMessage(m.error)} onClose={() => setForm(null)} onSubmit={submit} />}
     </>
   )
 }
@@ -393,7 +395,7 @@ export function CatalogPage() {
   const [uploadingImages, setUploadingImages] = useState(false)
   return (
     <>
-      <ScreenHeader title="Catálogo de activos" description="Catálogo maestro global: describe qué existe, no qué posee cada planta. Los códigos son inmutables."
+      <ScreenHeader title="Catálogo de activos" description="Catálogo maestro global: describe qué existe, no qué posee cada planta. Los códigos de integración se conservan."
         actions={<><Button variant="outline" onClick={() => setUploadingImages(true)}><ImagePlus /> Cargar imágenes</Button><Button variant="outline" onClick={() => setImporting(true)}><FileSpreadsheet /> Importar Excel</Button><Button variant="outline" onClick={() => setDeleting(true)}><Trash2 /> Eliminar por Excel</Button></>} />
       {uploadingImages && <CatalogImagesDialog onClose={() => setUploadingImages(false)} />}
       {importing && <CatalogImportDialog onClose={() => setImporting(false)} onImported={() => setTab('models')} />}
