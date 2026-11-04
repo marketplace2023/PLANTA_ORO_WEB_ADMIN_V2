@@ -1,3 +1,5 @@
+import { SpecificationsTab } from './catalog-specifications'
+import { FamilySpecificationFields } from '@/components/family-specification-fields'
 import { FileSpreadsheet, ImageIcon, ImagePlus, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -40,7 +42,7 @@ import { CatalogImportDialog } from '@/pages/catalog-import-dialog'
 import { CatalogDeleteDialog } from '@/pages/catalog-delete-dialog'
 import { CatalogImagesDialog } from '@/pages/catalog-images-dialog'
 
-type Tab = 'families' | 'types' | 'manufacturers' | 'models' | 'variables'
+type Tab = 'specifications' | 'families' | 'types' | 'manufacturers' | 'models' | 'variables'
 
 const opt = (v: string | boolean) => (String(v).trim() === '' ? undefined : String(v).trim())
 const nul = (v: string | boolean) => (String(v).trim() === '' ? null : String(v).trim())
@@ -227,6 +229,8 @@ function ModelsTab() {
   const networkMasters = useNetworkMasters()
   const [networkCodes, setNetworkCodes] = useState<string[]>([])
   const [references, setReferences] = useState<ReferenceManufacturer[]>([])
+  const [specDraft, setSpecDraft] = useState<{ typeCode: string; values: Record<string, unknown> } | null>(null)
+  const specificationsFor = (typeCode: string) => specDraft?.typeCode === typeCode ? specDraft.values : editing?.type.code === typeCode ? editing.specifications : {}
   /** Etapas elegidas para el modelo, con el tipo al que corresponden (al cambiar de tipo se vuelve a empezar). */
   const [stageSel, setStageSel] = useState<{ typeCode: string; codes: string[] } | null>(null)
   const editing = form?.row
@@ -253,9 +257,9 @@ function ModelsTab() {
     try {
       let id = editing?.id
       if (editing) {
-        await update.mutateAsync({ id: editing.id, modelName: String(v.modelName).trim(), technicalData: { ...editing.technicalData, fabricantesReferencia: references }, status: v.status as 'ACTIVE' | 'INACTIVE', stageCodes: stagesFor(editing.type.code).selected, networkCodes })
+        await update.mutateAsync({ id: editing.id, specifications: specificationsFor(editing.type.code), modelName: String(v.modelName).trim(), technicalData: { ...editing.technicalData, fabricantesReferencia: references }, status: v.status as 'ACTIVE' | 'INACTIVE', stageCodes: stagesFor(editing.type.code).selected, networkCodes })
       } else {
-        id = (await create.mutateAsync({ typeCode: String(v.typeCode), modelName: String(v.modelName).trim(), technicalData: { fabricantesReferencia: references }, stageCodes: stagesFor(String(v.typeCode)).selected, networkCodes })).id
+        id = (await create.mutateAsync({ typeCode: String(v.typeCode), specifications: specificationsFor(String(v.typeCode)), modelName: String(v.modelName).trim(), technicalData: { fabricantesReferencia: references }, stageCodes: stagesFor(String(v.typeCode)).selected, networkCodes })).id
       }
       try {
         if (id && image.file) await uploadImage.mutateAsync({ id, file: image.file })
@@ -292,7 +296,7 @@ function ModelsTab() {
           <option value="INACTIVE">Inactivos</option>
         </select>
       </div>
-      <Section title="Modelos" subtitle="Describen qué existe; los activos de cada planta se crean a partir de un modelo." addLabel="Nuevo modelo" onAdd={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel(null); setNetworkCodes([]); setReferences([]); setForm({}) }}>
+      <Section title="Modelos" subtitle="Modelos de referencia con especificaciones definidas por su familia." addLabel="Nuevo modelo" onAdd={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel(null); setNetworkCodes([]); setReferences([]); setSpecDraft(null); setForm({}) }}>
         {q.isLoading ? <div className="p-4"><Loading rows={6} /></div> : q.isError ? <Failed what="los modelos" onRetry={() => void q.refetch()} /> : q.data && q.data.items.length > 0 ? (
           <>
             <DataTable head={['Foto', 'TAG / Modelo', 'Tipo', 'Etapas', 'Redes', 'Familia', 'Fabricantes de referencia', 'Estado', { label: '', right: true }]}>
@@ -322,7 +326,7 @@ function ModelsTab() {
                   <td className={`${td} text-right`}>
                     <div className="flex justify-end gap-1.5">
                       <Button size="xs" variant="outline" aria-label={`Datos del fabricante de ${r.modelName}`} onClick={() => setVariablesOf(r)}><ListChecks /> Datos del fabricante</Button>
-                      <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel({ typeCode: r.type.code, codes: r.stageCodes }); setNetworkCodes(r.networkCodes); setReferences(r.referenceManufacturers ?? []); setForm({ row: r }) }}><Pencil /> Editar</Button>
+                      <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel({ typeCode: r.type.code, codes: r.stageCodes }); setNetworkCodes(r.networkCodes); setReferences(r.referenceManufacturers ?? []); setSpecDraft(null); setForm({ row: r }) }}><Pencil /> Editar</Button>
                       <Button size="xs" variant="outline" aria-label={`Eliminar ${r.modelName}`} onClick={() => { del.reset(); setRemoving(r) }}><Trash2 /> Eliminar</Button>
                     </div>
                   </td>
@@ -375,6 +379,7 @@ function ModelsTab() {
                     <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">El tipo aún no tiene etapas posibles. Agrégalas en la pestaña «Tipos» para poder elegir en cuáles participa este modelo.</p>
                   ))}
                 <CheckGroup legend="Redes transversales" options={(networkMasters.data ?? []).map(n => ({ value: n.code, label: n.name }))} value={networkCodes} onChange={setNetworkCodes} help="Estas redes corresponden solo a este modelo. Sin seleccionar ninguna, el modelo queda sin redes asignadas." />
+                <fieldset className="space-y-3 border-t border-border pt-4"><legend className="font-semibold">Especificaciones técnicas</legend><FamilySpecificationFields key={typeCode} familyId={families.data?.find(f => f.code === types.data?.find(t => t.code === typeCode)?.familyCode)?.id ?? ''} value={specificationsFor(typeCode)} onChange={values => setSpecDraft({ typeCode, values })} /></fieldset>
                 <ReferenceManufacturersFields value={references} onChange={setReferences} />
                 <ModelImagePicker currentUrl={editing?.imageUrl ?? null} value={image} onChange={setImage} />
               </>
@@ -410,6 +415,7 @@ export function CatalogPage() {
           { value: 'families', label: 'Familias' },
           { value: 'manufacturers', label: 'Fabricantes' },
           { value: 'variables', label: 'Variables' },
+          { value: 'specifications', label: 'Especificaciones' },
         ]}
       />
       <div className="mt-3">
@@ -418,6 +424,7 @@ export function CatalogPage() {
         {tab === 'families' && <FamiliesTab />}
         {tab === 'manufacturers' && <ManufacturersTab />}
         {tab === 'variables' && <VariablesTab />}
+        {tab === 'specifications' && <SpecificationsTab />}
       </div>
     </>
   )

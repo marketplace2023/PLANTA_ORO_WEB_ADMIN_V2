@@ -8,6 +8,7 @@ import { CatalogPage } from './catalog-page'
 const type = { id: 't1', code: 'PUMP', name: 'Bomba', description: null, familyCode: 'PUMPS', familyName: 'Bombas', stageCodes: ['D05'] }
 const model = { id: 'm1', modelName: 'Bomba de pulpa', catalogTag: null, specifications: {}, status: 'ACTIVE', imageUrl: null, stageCodes: ['D05'], stageInherited: true, networkCodes: ['FUR-PROC'], type, family: { id: 'f1', name: 'Bombas' }, technicalData: { componentes: ['Motor'], fabricantesReferencia: [{ nombre: 'WEG', alcance: null, sitioWeb: null }] }, referenceManufacturers: [{ nombre: 'WEG', alcance: null, sitioWeb: null }] }
 const setup = (routes: Parameters<typeof mockApi>[0] = {}) => mockApi({
+  'GET /catalog/specifications': { body: [] },
   'GET /catalog/assets': { body: { items: [model], total: 1, page: 1, pageSize: 20 } },
   'GET /catalog/types': { body: [type] },
   'GET /catalog/families': { body: [{ id: 'f1', code: 'PUMPS', tagCode: 'BOM', name: 'Bombas', icon: null, description: 'Descripción conservada' }] },

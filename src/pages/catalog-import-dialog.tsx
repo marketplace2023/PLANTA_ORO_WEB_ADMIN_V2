@@ -1,3 +1,4 @@
+import { formatSpecificationValue } from '@/lib/specification-value'
 import { CheckCircle2, Download, FileSpreadsheet, LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -154,7 +155,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
                             <p className="mt-3 mb-1 font-medium">Componentes principales</p>
                             {r.components.length > 0 ? <ol className="mb-3 list-decimal space-y-1 pl-5">{r.components.map((component, i) => <li key={i} className="whitespace-pre-wrap">{component}</li>)}</ol> : <p className="mb-3">Sin componentes informados</p>}
                             <p className="mb-1 font-medium">Especificaciones técnicas</p>
-                            <dl className="space-y-1">{Object.entries(r.specifications).map(([k, v]) => <div key={k}><dt className="font-medium">{k}</dt><dd>{v}</dd></div>)}</dl>
+                            <dl className="space-y-1">{Object.entries(r.specifications).map(([k, v]) => <div key={k}><dt className="font-medium">{k}</dt><dd>{formatSpecificationValue(v)}</dd></div>)}</dl>
                             <p className="mt-3 mb-1 font-medium">Fabricantes de referencia y web</p>
                             {r.referenceManufacturers == null ? <p>El archivo no incluye la hoja de fabricantes de referencia.</p> : r.referenceManufacturers.length === 0 ? <p>Sin fabricantes de referencia informados.</p> : (
                               <ul className="list-disc space-y-2 pl-5">{r.referenceManufacturers.map((m, i) => <li key={i}><p className="font-medium">{m.nombre}</p>{m.alcance && <p className="whitespace-pre-wrap">{m.alcance}</p>}{m.sitioWeb && <p className="break-all">{m.sitioWeb}</p>}</li>)}</ul>
