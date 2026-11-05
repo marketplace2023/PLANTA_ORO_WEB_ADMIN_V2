@@ -74,7 +74,7 @@ export function CatalogImportDialog({ onClose, onImported }: { onClose: () => vo
                 <a href={`${import.meta.env.BASE_URL}templates/plantilla-importacion-catalogo.xlsx`} download="plantilla-importacion-catalogo.xlsx"><Download /> Descargar plantilla Excel</a>
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">Completa Listado maestro y repite el mismo TAG ACTIVO en las otras hojas: una fila por componente en Características, una por parámetro en Especificaciones y una por fabricante en Fabricantes de referencia. Si no hay componentes o referencias, omite sus filas. Si faltan especificaciones, podrás aceptarlo después del análisis. Las familias se unifican por Código CA y su nombre en Categorías N4. Las redes se eligen aquí.</p>
+            <p className="text-sm text-muted-foreground">Completa Listado maestro y repite el mismo TAG ACTIVO en las otras hojas: una fila por componente en Características, una por parámetro en Especificaciones y una por fabricante en Fabricantes de referencia. Si no hay componentes o referencias, omite sus filas. Si faltan especificaciones, podrás aceptarlo después del análisis. Las familias se unifican por Código CA y su nombre en Familias. Las redes se eligen aquí.</p>
             {networks.isLoading ? <p role="status" className="text-sm text-muted-foreground">Cargando redes transversales…</p> : networks.isError ? (
               <div role="alert" className="flex items-center gap-3 text-sm text-red-800">
                 <span>No se pudieron cargar las redes transversales.</span>
