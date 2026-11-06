@@ -21,6 +21,63 @@ const setup = (routes: Parameters<typeof mockApi>[0] = {}) => mockApi({
 
 afterEach(() => vi.unstubAllGlobals())
 
+describe('Vista previa de la ficha del modelo', () => {
+  it('consulta la ficha completa sin modificar el catálogo y permite volver a la lista', async () => {
+    const api = setup({
+      'GET /catalog/assets': { body: { items: [{ ...model, catalogTag: 'BOM-001', specifications: { potencia: 0, reversible: false, caudal: { min: 10, max: 20 } }, referenceManufacturers: [{ nombre: 'WEG', alcance: 'Motor de referencia', sitioWeb: 'https://www.weg.net' }] }], total: 1, page: 1, pageSize: 20 } },
+      'GET /catalog/specifications': { body: [{ key: 'potencia', label: 'Potencia nominal', unit: 'kW' }] },
+      'GET /catalog/models/m1/variables': { body: [{ id: 'v1', label: 'Velocidad', valueType: 'NUMBER', value: 1500, unit: 'rpm' }] },
+    })
+    renderWithProviders(<CatalogPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Ver ficha de Bomba de pulpa' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Ficha del modelo' })
+    expect(within(dialog).getByText('BOM-001')).toBeInTheDocument()
+    expect(within(dialog).getByText(/· Molienda primaria/)).toBeInTheDocument()
+    expect(within(dialog).getByText('Procesos')).toBeInTheDocument()
+    expect(await within(dialog).findByText('Potencia nominal (kW)')).toBeInTheDocument()
+    expect(within(dialog).getByText('0')).toBeInTheDocument()
+    expect(within(dialog).getByText('No')).toBeInTheDocument()
+    expect(within(dialog).getByText('10 – 20')).toBeInTheDocument()
+    expect(within(dialog).getByText('Motor')).toBeInTheDocument()
+    expect(within(dialog).getByText('Motor de referencia')).toBeInTheDocument()
+    expect(within(dialog).getByRole('link', { name: 'weg.net' })).toHaveAttribute('href', 'https://www.weg.net/')
+    expect(await within(dialog).findByText('1500 rpm')).toBeInTheDocument()
+    expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cerrar' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Ver ficha de Bomba de pulpa' })).toBeInTheDocument()
+    expect(api.calls.every(call => call.method === 'GET')).toBe(true)
+  })
+
+  it('muestra los datos vacíos de un modelo inactivo y cierra con Escape', async () => {
+    setup({
+      'GET /catalog/assets': { body: { items: [{ ...model, status: 'INACTIVE', technicalData: undefined, referenceManufacturers: [], stageCodes: [], networkCodes: [] }], total: 1, page: 1, pageSize: 20 } },
+      'GET /catalog/models/m1/variables': { body: [] },
+    })
+    renderWithProviders(<CatalogPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Ver ficha de Bomba de pulpa' }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('Inactivo')).toBeInTheDocument()
+    expect(within(dialog).getByText('Sin foto del modelo')).toBeInTheDocument()
+    expect(within(dialog).getByText('Sin especificaciones técnicas registradas.')).toBeInTheDocument()
+    expect(await within(dialog).findByText('Sin datos del fabricante registrados.')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('conserva la ficha visible y permite reintentar si falla la carga del fabricante', async () => {
+    let attempts = 0
+    setup({ 'GET /catalog/models/m1/variables': () => ++attempts === 1 ? { status: 500, body: { message: 'Error temporal' } } : { body: [] } })
+    renderWithProviders(<CatalogPage />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Ver ficha de Bomba de pulpa' }))
+    const dialog = screen.getByRole('dialog')
+    const alert = await within(dialog).findByRole('alert')
+    expect(alert).toHaveTextContent('No se pudieron cargar los datos del fabricante.')
+    await userEvent.click(within(alert).getByRole('button', { name: 'Reintentar' }))
+    expect(await within(dialog).findByText('Sin datos del fabricante registrados.')).toBeInTheDocument()
+  })
+})
+
 describe('Códigos TAG de familias', () => {
   it('muestra ambos códigos y exige el código TAG al crear una familia', async () => {
     const api = setup({ 'POST /catalog/families': { status: 201, body: {} } })

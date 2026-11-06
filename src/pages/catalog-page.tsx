@@ -1,7 +1,7 @@
 import { CatalogRequestsTab } from './catalog-requests'
 import { SpecificationsTab } from './catalog-specifications'
 import { FamilySpecificationFields } from '@/components/family-specification-fields'
-import { FileSpreadsheet, ImageIcon, ImagePlus, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Eye, FileSpreadsheet, ImageIcon, ImagePlus, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { CheckGroup } from '@/components/check-group'
@@ -10,6 +10,7 @@ import { FormDialog, type Field, type Values } from '@/components/form-dialog'
 import { errorMessage, selectClass } from '@/lib/forms'
 import { DataTable, Empty, Failed, Loading, Panel, Pill, ScreenHeader, Segmented, td } from '@/components/kit'
 import { ModelImagePicker, type ImageChange } from '@/components/model-image-picker'
+import { ModelFichaDialog } from '@/components/model-ficha-dialog'
 import { ModelVariablesDialog, VariablesTab } from '@/pages/catalog-variables'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -226,6 +227,7 @@ function ModelsTab() {
   const q = useModels({ search: useDebouncedValue(search.trim()) || undefined, family: family || undefined, status, page })
   const [form, setForm] = useState<{ row?: Model } | null>(null)
   const [variablesOf, setVariablesOf] = useState<Model | null>(null)
+  const [previewOf, setPreviewOf] = useState<Model | null>(null)
   const stageMasters = useStageMasters()
   const networkMasters = useNetworkMasters()
   const [networkCodes, setNetworkCodes] = useState<string[]>([])
@@ -308,7 +310,7 @@ function ModelsTab() {
                       {r.imageUrl ? <img src={apiUrl(r.imageUrl)} alt={`Foto de ${r.modelName}`} loading="lazy" className="size-full object-contain" /> : <ImageIcon className="size-5 text-fur-gray-500" aria-label="Sin foto" />}
                     </span>
                   </td>
-                  <td className={`${td} font-medium text-fur-navy-900`}>{r.catalogTag && <div className="fur-code mb-1 text-xs text-muted-foreground">{r.catalogTag}</div>}{r.modelName}</td>
+                  <td className={`${td} font-medium text-fur-navy-900`}>{r.catalogTag && <div className="fur-code mb-1 text-xs text-muted-foreground">{r.catalogTag}</div>}{r.modelName}<div className="mt-2"><Button size="xs" variant="outline" aria-label={`Ver ficha de ${r.modelName}`} onClick={() => setPreviewOf(r)}><Eye /> Ver ficha</Button></div></td>
                   <td className={td}>{r.type.name}</td>
                   <td className={td}>
                     {r.stageCodes.length === 0 ? (
@@ -345,6 +347,7 @@ function ModelsTab() {
         ) : <Empty>No hay modelos con estos filtros.</Empty>}
       </Section>
       {variablesOf && <ModelVariablesDialog model={variablesOf} onClose={() => setVariablesOf(null)} />}
+      {previewOf && <ModelFichaDialog model={previewOf} typeDescription={types.data?.find(t => t.id === previewOf.type.id)?.description} stages={stageMasters.data ?? []} networks={networkMasters.data ?? []} onClose={() => setPreviewOf(null)} />}
       {removing && (
         <ConfirmDeleteDialog
           title={`Eliminar el modelo ${removing.modelName}`}
