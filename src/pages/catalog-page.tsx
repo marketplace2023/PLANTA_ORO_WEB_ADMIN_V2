@@ -1,3 +1,4 @@
+import { CatalogRequestsTab } from './catalog-requests'
 import { SpecificationsTab } from './catalog-specifications'
 import { FamilySpecificationFields } from '@/components/family-specification-fields'
 import { FileSpreadsheet, ImageIcon, ImagePlus, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
@@ -42,7 +43,7 @@ import { CatalogImportDialog } from '@/pages/catalog-import-dialog'
 import { CatalogDeleteDialog } from '@/pages/catalog-delete-dialog'
 import { CatalogImagesDialog } from '@/pages/catalog-images-dialog'
 
-type Tab = 'specifications' | 'families' | 'types' | 'manufacturers' | 'models' | 'variables'
+type Tab = 'requests' | 'specifications' | 'families' | 'types' | 'manufacturers' | 'models' | 'variables'
 
 const opt = (v: string | boolean) => (String(v).trim() === '' ? undefined : String(v).trim())
 const nul = (v: string | boolean) => (String(v).trim() === '' ? null : String(v).trim())
@@ -411,6 +412,7 @@ export function CatalogPage() {
         onChange={setTab}
         options={[
           { value: 'models', label: 'Modelos' },
+          { value: 'requests', label: 'Solicitudes de plantas' },
           { value: 'types', label: 'Tipos' },
           { value: 'families', label: 'Familias' },
           { value: 'manufacturers', label: 'Fabricantes' },
@@ -420,6 +422,7 @@ export function CatalogPage() {
       />
       <div className="mt-3">
         {tab === 'models' && <ModelsTab />}
+        {tab === 'requests' && <CatalogRequestsTab />}
         {tab === 'types' && <TypesTab />}
         {tab === 'families' && <FamiliesTab />}
         {tab === 'manufacturers' && <ManufacturersTab />}
