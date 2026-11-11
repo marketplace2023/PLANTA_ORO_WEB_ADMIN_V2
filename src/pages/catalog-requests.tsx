@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Panel, Loading, Failed, Empty } from '@/components/kit'
 
-type Submission = { id: string; plantName: string; status: string; modelId: string | null; decisionNote: string | null; draft: { name: string; familyId: string; stageCode: string; networkCodes: string[]; serialNumber?: string; specifications: Record<string, unknown>; components: string[] }; reviewedModel: { modelName: string; assetTypeId: string; specifications: Record<string, unknown>; technicalData: { componentes?: string[] }; imageUrl: string | null } | null }
+type Submission = { id: string; plantName: string; status: string; modelId: string | null; decisionNote: string | null; draft: { name: string; familyId: string; stageCode: string; networkCodes: string[]; serialNumber?: string; requestNote?: string; specifications: Record<string, unknown>; components: string[] }; reviewedModel: { modelName: string; assetTypeId: string; specifications: Record<string, unknown>; technicalData: { componentes?: string[] }; imageUrl: string | null } | null }
 export function CatalogRequestsTab() {
   const client = useQueryClient()
   const query = useQuery({ queryKey: ['catalog', 'requests'], queryFn: () => api<Submission[]>('/catalog/requests') })
@@ -62,6 +62,10 @@ export function CatalogRequestsTab() {
     {selected && <Panel title={selected.draft.name} subtitle={`${selected.plantName} · ${family?.name ?? ''} · ${selected.draft.stageCode} · ${selected.draft.networkCodes.join(', ')}`}>
       <div className="space-y-5">
         <p className="text-sm text-muted-foreground">La ficha de planta se conserva como fue enviada. Los ajustes siguientes corresponden al modelo del catálogo.</p>
+        <section className="space-y-2 rounded-lg border bg-muted/30 p-4">
+          <h3 className="text-sm font-semibold">Nota de la solicitud</h3>
+          <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{selected.draft.requestNote || 'La planta no incluyó una nota.'}</p>
+        </section>
         {selected.draft.serialNumber && <p className="text-sm">Serie de la unidad: {selected.draft.serialNumber}</p>}
         {selected.status === 'PENDING' ? <>
           <div className="space-y-2"><Label htmlFor="request-type">Tipo de activo</Label><select id="request-type" className={selectClass} value={typeCode} onChange={e => { setTypeCode(e.target.value); setDirty(true) }}><option value="">Selecciona un tipo de esta familia</option>{types.data?.filter(t => t.familyCode === family?.code).map(t => <option key={t.id} value={t.code}>{t.name}</option>)}</select><p className="text-xs text-muted-foreground">Si falta el tipo o su etapa, configúralos en la pestaña Tipos.</p></div>
