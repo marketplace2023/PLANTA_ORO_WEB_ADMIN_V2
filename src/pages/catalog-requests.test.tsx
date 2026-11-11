@@ -33,6 +33,7 @@ it('permite completar la ficha antes de aprobar y registra la decisión', async 
   await userEvent.type(screen.getByLabelText('Nombre del modelo'), 'Modelo para catálogo')
   expect(sheet.getByRole('heading', { name: 'Motor solicitado' })).toBeInTheDocument()
   await userEvent.selectOptions(screen.getByLabelText('Tipo de activo'), 'MOTOR')
+  expect(screen.getByText(/Al aprobar, el tipo se asociará automáticamente a la etapa solicitada/)).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Guardar ficha de catálogo' }))
   await waitFor(() => expect(screen.getByRole('button', { name: 'Aprobar y registrar activo' })).toBeEnabled())
   await userEvent.click(screen.getByRole('button', { name: 'Aprobar y registrar activo' }))
