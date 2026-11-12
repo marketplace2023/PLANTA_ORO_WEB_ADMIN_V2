@@ -35,7 +35,7 @@ export const usePlant = (slug: string | undefined) => useQuery({ queryKey: ['pla
 export const usePlantStages = (slug: string) => useQuery({ queryKey: ['plant', slug, 'stages'], queryFn: () => api<PlantStage[]>(`/plants/${slug}/stages`) })
 export const usePlantNetworks = (slug: string) => useQuery({ queryKey: ['plant', slug, 'networks'], queryFn: () => api<PlantNetwork[]>(`/plants/${slug}/networks`) })
 export const useMembers = (slug: string) => useQuery({ queryKey: ['plant', slug, 'members'], queryFn: () => api<Member[]>(`/plants/${slug}/members`) })
-export const useAssignableRoles = (slug: string) => useQuery({ queryKey: ['plant', slug, 'members', 'roles'], queryFn: () => api<AssignableRole[]>(`/plants/${slug}/members/roles`), staleTime: 5 * 60_000 })
+export const useAssignableRoles = (slug: string) => useQuery({ queryKey: ['plant', slug, 'members', 'roles'], queryFn: () => api<AssignableRole[]>(`/plants/${slug}/members/roles`), enabled: !!slug, staleTime: 5 * 60_000 })
 
 /** Un cambio en una planta invalida su detalle, el listado y los indicadores del ecosistema. */
 function useInvalidate(slug?: string) {

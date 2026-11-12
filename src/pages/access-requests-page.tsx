@@ -1,10 +1,12 @@
-import { Check, X } from 'lucide-react'
+import { Check, UserPlus, X } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { DataTable, Empty, Failed, Loading, Panel, Pill, ScreenHeader, Segmented, td } from '@/components/kit'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import {
   ACCESS_STATUS_LABELS,
@@ -15,7 +17,7 @@ import {
   type AccessRequestFilter,
   type AccessRequestStatus,
 } from '@/features/plants/use-access-requests'
-import { useAssignableRoles } from '@/features/plants/use-plants'
+import { useAssignableRoles, useAssignMember, usePlants } from '@/features/plants/use-plants'
 import { errorMessage, selectClass } from '@/lib/forms'
 import { formatDateTime } from '@/lib/format'
 import { ROLE_LABELS } from '@/lib/roles'
@@ -29,6 +31,36 @@ const STATUS_COLOR: Record<AccessRequestStatus, string> = {
 
 /** Rol por defecto sugerido: el de menor alcance, para que ampliar el acceso sea una decisión consciente. */
 const DEFAULT_ROLE = 'CONSUMER'
+
+function AssignAccessDialog({ onClose }: { onClose: () => void }) {
+  const plants = usePlants()
+  const [slug, setSlug] = useState('')
+  const [email, setEmail] = useState('')
+  const [roleCode, setRoleCode] = useState(DEFAULT_ROLE)
+  const roles = useAssignableRoles(slug)
+  const assign = useAssignMember(slug)
+  const validRole = roles.data?.some(role => role.code === roleCode)
+  return <Dialog open onOpenChange={open => !open && !assign.isPending && onClose()}>
+    <DialogContent>
+      <DialogHeader><DialogTitle>Asignar acceso a una planta</DialogTitle><DialogDescription>Asigna una cuenta ya registrada sin esperar una solicitud. El rol determina sus permisos; no es un cargo laboral.</DialogDescription></DialogHeader>
+      <form className="space-y-4" onSubmit={event => {
+        event.preventDefault()
+        if (!slug || !validRole || assign.isPending) return
+        assign.mutate({ email: email.trim(), roleCode }, { onSuccess: () => { toast.success('Acceso a planta asignado'); onClose() } })
+      }}>
+        <div className="space-y-1.5"><Label htmlFor="access-plant">Planta de destino</Label><select id="access-plant" required disabled={assign.isPending} className={selectClass} value={slug} onChange={event => { setSlug(event.target.value); setRoleCode(DEFAULT_ROLE); assign.reset() }}><option value="">Selecciona una planta</option>{plants.data?.map(plant => <option value={plant.slug} key={plant.id}>{plant.name} · {plant.code}</option>)}</select></div>
+        {plants.isLoading && <p role="status">Cargando plantas…</p>}
+        {plants.isError && <p role="alert">No se pudieron cargar las plantas. <Button type="button" variant="outline" size="sm" onClick={() => void plants.refetch()}>Reintentar</Button></p>}
+        {!plants.isLoading && !plants.isError && !plants.data?.length && <p>No hay plantas creadas. Crea una desde Plantas antes de asignar accesos.</p>}
+        <div className="space-y-1.5"><Label htmlFor="access-email">Correo del usuario registrado</Label><Input id="access-email" type="email" required disabled={assign.isPending} value={email} onChange={event => setEmail(event.target.value)} placeholder="persona@empresa.com" /></div>
+        <div className="space-y-1.5"><Label htmlFor="access-role">Rol en la planta</Label><select id="access-role" className={selectClass} required disabled={!slug || roles.isLoading || roles.isError || assign.isPending} value={validRole ? roleCode : ''} onChange={event => setRoleCode(event.target.value)}><option value="">Selecciona un rol</option>{roles.data?.map(role => <option key={role.code} value={role.code}>{ROLE_LABELS[role.code] ?? role.name}</option>)}</select><p className="text-xs text-muted-foreground">Elige el alcance necesario. «Usuario común» tiene acceso de lectura; presupuesto/costos, mantenimiento y otros roles habilitan sus operaciones.</p></div>
+        {slug && roles.isError && <p role="alert">No se pudieron cargar los roles. <Button type="button" variant="outline" size="sm" onClick={() => void roles.refetch()}>Reintentar roles</Button></p>}
+        {assign.isError && <p role="alert" className="text-sm text-destructive">{errorMessage(assign.error)}</p>}
+        <DialogFooter><Button type="button" variant="outline" disabled={assign.isPending} onClick={onClose}>Cancelar</Button><Button type="submit" disabled={!slug || !email.trim() || !validRole || roles.isError || assign.isPending}>{assign.isPending ? 'Asignando…' : 'Confirmar asignación'}</Button></DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
+}
 
 function DecideDialog({ request, mode, onClose }: { request: AccessRequest; mode: 'approve' | 'reject'; onClose: () => void }) {
   const approve = useApproveAccessRequest()
@@ -94,13 +126,15 @@ export function AccessRequestsPage() {
   const [filter, setFilter] = useState<AccessRequestFilter>('PENDING')
   const q = useAccessRequests(filter)
   const [action, setAction] = useState<{ request: AccessRequest; mode: 'approve' | 'reject' } | null>(null)
+  const [assigning, setAssigning] = useState(false)
   const rows = q.data ?? []
 
   return (
     <>
       <ScreenHeader
         title="Solicitudes de acceso a plantas"
-        description="Quien se registra en el panel de planta pide acceso a una planta. Al aprobar eliges el rol; mientras esté pendiente no puede hacer nada."
+        description="Registrarse crea una cuenta, no una solicitud. Aquí aparecen quienes pulsaron Solicitar acceso desde el panel de planta. También puedes asignar una planta y un rol directamente."
+        actions={<Button onClick={() => setAssigning(true)}><UserPlus /> Asignar acceso</Button>}
       />
 
       <Segmented<AccessRequestFilter>
@@ -121,7 +155,7 @@ export function AccessRequestsPage() {
         ) : q.isError ? (
           <Failed what="las solicitudes" onRetry={() => void q.refetch()} />
         ) : rows.length === 0 ? (
-          <Empty>{filter === 'PENDING' ? 'No hay solicitudes pendientes.' : 'No hay solicitudes con este filtro.'}</Empty>
+          <Empty><div className="space-y-3"><p>{filter === 'PENDING' ? 'No hay solicitudes pendientes.' : 'No hay solicitudes con este filtro.'}</p><p className="max-w-xl text-sm">Los usuarios registrados no aparecen automáticamente en esta lista. Para dar acceso sin solicitud, usa «Asignar acceso» e indica correo, planta y rol.</p><Link className="text-sm font-semibold underline" to="/plants">Ver plantas y miembros</Link></div></Empty>
         ) : (
           <DataTable head={['Persona', 'Planta', 'Mensaje', 'Fecha', 'Estado', { label: 'Acciones', right: true }]}>
             {rows.map((r) => (
@@ -153,6 +187,7 @@ export function AccessRequestsPage() {
       </Panel>
 
       {action && <DecideDialog request={action.request} mode={action.mode} onClose={() => setAction(null)} />}
+      {assigning && <AssignAccessDialog onClose={() => setAssigning(false)} />}
     </>
   )
 }
