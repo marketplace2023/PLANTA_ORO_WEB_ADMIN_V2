@@ -24,7 +24,7 @@ afterEach(() => vi.unstubAllGlobals())
 describe('Vista previa de la ficha del modelo', () => {
   it('consulta la ficha completa sin modificar el catálogo y permite volver a la lista', async () => {
     const api = setup({
-      'GET /catalog/assets': { body: { items: [{ ...model, catalogTag: 'BOM-001', specifications: { potencia: 0, reversible: false, caudal: { min: 10, max: 20 } }, referenceManufacturers: [{ nombre: 'WEG', alcance: 'Motor de referencia', sitioWeb: 'https://www.weg.net' }] }], total: 1, page: 1, pageSize: 20 } },
+      'GET /catalog/assets': { body: { items: [{ ...model, catalogTag: 'BOM-001', specifications: { potencia: 0, reversible: false, caudal: { min: 10, max: 20 }, rangoNoAplicable: ' NO APLICA ' }, referenceManufacturers: [{ nombre: 'WEG', alcance: 'Motor de referencia', sitioWeb: 'https://www.weg.net' }] }], total: 1, page: 1, pageSize: 20 } },
       'GET /catalog/specifications': { body: [{ key: 'potencia', label: 'Potencia nominal', unit: 'kW' }] },
       'GET /catalog/models/m1/variables': { body: [{ id: 'v1', label: 'Velocidad', valueType: 'NUMBER', value: 1500, unit: 'rpm' }] },
     })
@@ -38,6 +38,7 @@ describe('Vista previa de la ficha del modelo', () => {
     expect(within(dialog).getByText('0')).toBeInTheDocument()
     expect(within(dialog).getByText('No')).toBeInTheDocument()
     expect(within(dialog).getByText('10 – 20')).toBeInTheDocument()
+    expect(within(dialog).queryByText(/no aplica|rango No Aplicable/i)).not.toBeInTheDocument()
     expect(within(dialog).getByText('Motor')).toBeInTheDocument()
     expect(within(dialog).getByText('Motor de referencia')).toBeInTheDocument()
     expect(within(dialog).getByRole('link', { name: 'weg.net' })).toHaveAttribute('href', 'https://www.weg.net/')

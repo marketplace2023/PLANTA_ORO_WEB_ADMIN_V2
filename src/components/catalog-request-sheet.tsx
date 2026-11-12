@@ -1,3 +1,4 @@
+import { visibleSpecificationEntries } from '@/lib/specification-value'
 import type { ReactNode } from 'react'
 import { ClipboardList } from 'lucide-react'
 import { useStageMasters, useNetworkMasters, type Family } from '@/features/catalog/use-catalog'
@@ -47,7 +48,7 @@ export function CatalogRequestSheet({ request, family }: { request: CatalogSubmi
   const stages = useStageMasters(), networks = useNetworkMasters()
   const { draft } = request
   const stage = stages.data?.find(s => s.code === draft.stageCode)
-  const specifications = Object.entries(draft.specifications ?? {})
+  const specifications = visibleSpecificationEntries(draft.specifications)
   const components = draft.components ?? []
 
   return <section aria-label="Ficha de la solicitud" className="request-sheet min-w-0 overflow-hidden border border-border bg-card">
