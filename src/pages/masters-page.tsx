@@ -1,3 +1,4 @@
+import { NetworkMark } from '@/components/network-mark'
 import { ImageIcon, Info, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -287,7 +288,8 @@ export function MastersPage() {
         ) : networks.data && networks.data.length > 0 ? (
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {networks.data.map((n) => (
-              <li key={n.id} className="flex flex-col rounded-lg border border-border bg-fur-gray-50 p-3" style={{ borderTopColor: n.colorToken ? `var(--${n.colorToken})` : 'var(--fur-navy-800)', borderTopWidth: 3 }}>
+              <li key={n.id} className="master-network-card flex flex-col rounded-lg border border-border bg-fur-gray-50 p-3" style={{ borderTopColor: n.colorToken ? `var(--${n.colorToken})` : 'var(--fur-navy-800)', borderTopWidth: 3 }}>
+                <NetworkMark code={n.code} colorToken={n.colorToken} />
                 <p className="fur-code text-[11px] text-muted-foreground">{n.code}</p>
                 <p className="font-semibold text-fur-navy-900">{n.name}</p>
                 <span className="mt-2 grid h-24 place-items-center overflow-hidden rounded-md border border-border bg-white">

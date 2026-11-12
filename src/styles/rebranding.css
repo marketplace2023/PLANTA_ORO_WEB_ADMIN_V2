@@ -1,0 +1,91 @@
+/* Identidad FUR compartida con el portal del ecosistema. */
+body { font-variant-numeric: tabular-nums; }
+.brand-logo { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; color: var(--fur-navy-950); }
+.brand-logo > span { display: flex; flex-direction: column; line-height: 1.08; }
+.brand-logo strong { font-size: 29px; font-weight: 800; letter-spacing: -1px; }
+.brand-logo span span { font-size: 11px; font-weight: 550; }
+.brand-logo small { font-size: 9px; margin-top: 1px; }
+.brand-logo:focus-visible { outline: 3px solid var(--ring); outline-offset: 4px; border-radius: 3px; }
+.panel-sidebar { background: white; border-right: 1px solid var(--border); }
+.sidebar-brand { background: linear-gradient(110deg, #fff8dd, #ffe977 65%, #ffdc27); padding: 18px 18px 14px; margin-bottom: 16px; border-bottom: 1px solid #e9c54a50; }
+.sidebar-brand .brand-logo img { width: 58px; height: 42px; }
+.sidebar-brand > p { font-size: 9px; font-weight: 600; color: #6c5926; letter-spacing: .1em; text-transform: uppercase; margin: 10px 0 0 65px; }
+.panel-sidebar nav a { min-height: 40px; border-radius: 5px; font-size: 12px; transition: background .18s, color .18s, border-color .18s; }
+.panel-sidebar nav a[aria-current=page] { background: linear-gradient(90deg, #fff0a5, #fff9e1); border-left-color: #e6b600; color: var(--fur-navy-950); }
+.panel-sidebar nav a svg { width: 17px; height: 17px; stroke-width: 1.7; }
+.sidebar-user { background: #f7faff; }
+.panel-topbar { min-height: 74px; background: linear-gradient(110deg, #fff8dd, #ffe977 50%, #ffdc27); color: var(--fur-navy-950); border-bottom: 1px solid #e6c14550; box-shadow: 0 2px 8px #08254c06; }
+.panel-topbar [aria-label='Actualizar datos'] { background: #fff9dc; border-color: #c4a33d50; font-size: 11px; }
+.panel-topbar [aria-label='Actualizar datos']:hover { background: white; }
+.topbar-brand-mark { width: 34px; height: 30px; }
+.panel-main { background: radial-gradient(ellipse at top left, #eaf2fe66, transparent 65%), var(--surface-page); }
+.screen-banner { position: relative; isolation: isolate; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; min-height: 150px; margin-bottom: 24px; padding: 26px 28px; overflow: hidden; border: 1px solid #163f67; border-radius: 12px; background: #061a36; color: white; }
+.screen-banner::before { content: ''; position: absolute; z-index: -1; inset: 0; background: linear-gradient(90deg, #061a36 5%, #061a36eb 35%, #061a3655 75%, #061a3699), url('/brand/plant-banner.jpg') right 54% / cover no-repeat; }
+.screen-banner::after { content: ''; position: absolute; left: 28px; top: 0; width: 46px; height: 3px; background: #ffda24; }
+.screen-banner > div:first-child { min-width: 0; flex: 1 1 280px; }
+.screen-banner-title { color: white; font-size: clamp(24px, 2.4vw, 32px); line-height: 1.15; font-weight: 750; letter-spacing: -.035em; text-wrap: balance; }
+.screen-banner-description { max-width: 640px; color: #deebfa; font-size: 12px; line-height: 1.6; margin-top: 9px; text-wrap: pretty; }
+.screen-banner-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.screen-banner-actions [data-slot=button][data-variant=outline], .screen-banner-actions [data-slot=button][data-variant=secondary] { background: #fff; border-color: #dce8f8; color: var(--fur-navy-900); }
+.screen-banner-actions [data-slot=button][data-variant=ghost] { color: white; }
+.screen-banner-actions [data-slot=button][data-variant=ghost]:hover { background: #ffffff20; }
+.fur-panel { border-radius: 9px; box-shadow: 0 2px 6px #10386604; overflow: clip; }
+.fur-panel > header { background: linear-gradient(100deg, #fff, #f7faff); border-bottom-color: #e4ecf9; }
+.fur-panel > header h2 { letter-spacing: -.015em; }
+.fur-kpi { border-radius: 9px; box-shadow: 0 2px 6px #10386604; background: linear-gradient(135deg, #fff, #f8fbff); }
+.fur-kpi > div:first-child > span:last-child { background: #fff3bc; color: var(--fur-navy-900); border: 1px solid #f5df87; border-radius: 8px; }
+.fur-kpi > div:first-child > span:first-child { text-transform: none; letter-spacing: 0; font-size: 11px; font-weight: 550; }
+[data-slot=card] { --tw-ring-color: #dce8f8; border-radius: 9px; box-shadow: 0 2px 6px #10386604; }
+[data-slot=table-header], .fur-panel thead { background: #eef4fd; color: var(--fur-navy-900); }
+[data-slot=table-row], .fur-panel tbody tr { transition: background-color .18s; }
+.fur-panel tbody tr:hover { background: #f6f9ff; }
+.master-network-card, .plant-network-card { position: relative; background: linear-gradient(145deg, #fff, #f8fbff); box-shadow: 0 2px 7px #10386604; }
+.network-mark { display: grid; place-items: center; width: 38px; height: 38px; margin-bottom: 12px; border: 1px solid color-mix(in srgb, var(--network-color) 20%, white); border-radius: 10px; background: color-mix(in srgb, var(--network-color) 9%, white); color: var(--network-color); }
+.network-mark svg { width: 21px; height: 21px; stroke-width: 1.7; }
+[data-slot=tabs-list] { height: auto; padding: 4px; background: white; border: 1px solid var(--border); border-radius: 7px; }
+[data-slot=tabs-trigger] { font-size: 12px; border-radius: 4px; }
+[data-slot=tabs-trigger][data-state=active] { background: #fff5cd; box-shadow: inset 0 -2px #ffd21c; color: var(--fur-navy-900); }
+[data-slot=dropdown-menu-content] { border-top: 3px solid var(--fur-gold-500); box-shadow: 0 10px 30px #061a3620; }
+[data-slot=dialog-content], [data-slot=sheet-content] { border-color: var(--border); }
+[data-slot=dialog-header] { padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+button, a, input, select { transition: background-color .18s, border-color .18s, box-shadow .18s; }
+button:not(:disabled), [role=button]:not([aria-disabled=true]) { cursor: pointer; }
+.skip-link { position: fixed; z-index: 60; top: -100px; left: 16px; padding: 12px; border-radius: 4px; background: white; color: var(--fur-navy-900); }
+.skip-link:focus { top: 8px; }
+.panel-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 15px 32px; color: #dce8f8; font-size: 9px; background: linear-gradient(110deg, #061a36, #103866); }
+.panel-footer > span { display: inline-flex; align-items: center; gap: 7px; }
+.panel-footer img { width: 32px; height: 24px; filter: brightness(0) invert(1); }
+.panel-footer strong { color: white; font-size: 18px; }
+.panel-footer > p { color: #ffdc35; text-transform: uppercase; font-size: 9px; letter-spacing: .025em; }
+.panel-footer-motto { margin-left: auto; }
+.panel-footer-motto svg { width: 19px; height: 19px; color: #93c940; }
+.login-shell { min-height: 100dvh; }
+.login-visual { isolation: isolate; background: #061a36; }
+.login-visual::before { content: ''; position: absolute; z-index: -1; inset: 0; background: linear-gradient(180deg, #061a36a0, #061a3650 35%, #061a36f5 80%), url('/brand/plant-banner.jpg') 58% center / cover no-repeat; }
+.login-brand { align-self: flex-start; padding: 12px 18px; border-radius: 7px; background: linear-gradient(110deg, #fff8dd, #ffe15c); box-shadow: 0 4px 18px #061a3620; }
+.login-visual h1 { font-size: clamp(32px, 3.2vw, 48px); line-height: 1.1; letter-spacing: -.04em; text-wrap: balance; }
+.login-visual > div:last-child[aria-hidden] { opacity: .35; }
+.login-main { background: radial-gradient(ellipse at top right, #fff3bd90, transparent 65%), var(--surface-page); }
+.login-content { width: 100%; max-width: 430px; }
+.login-content > form { max-width: none; padding: 30px; background: white; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 32px #10386608; }
+.login-content h2 { font-size: 25px; letter-spacing: -.03em; }
+.login-content form > button[type=submit] { height: 44px; box-shadow: 0 2px 5px #d6ab0b15; }
+.login-mobile-brand { margin-bottom: 26px; text-align: center; }
+@media (max-width: 1023px) {
+  .panel-sidebar .sidebar-brand { padding-right: 38px; }
+  .panel-topbar { min-height: 64px; }
+  .panel-main { padding-top: 18px; }
+  .screen-banner { padding: 24px 20px; gap: 16px; min-height: 140px; }
+  .screen-banner::after { left: 20px; }
+  .panel-footer { padding: 16px; gap: 10px 18px; }
+  .login-main { min-height: 100dvh; }
+}
+@media (max-width: 600px) {
+  .screen-banner-actions { width: 100%; }
+  .panel-footer-motto { margin-left: 0; }
+  .login-content > form { padding: 24px; }
+  .screen-banner-title { font-size: 25px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
+}
