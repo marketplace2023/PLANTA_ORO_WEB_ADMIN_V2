@@ -1,6 +1,7 @@
+import { CommandDeck, RadialMetric } from '@/components/ui/studio'
 import { Activity, ArrowRight, BookOpen, Cable, CheckCircle2, Cog, Database, Factory, Plug, ScrollText, ShieldCheck, Users, AlertOctagon } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { BarRows, DataTable, Empty, Failed, Kpi, Loading, Panel, Pill, ScreenHeader, td, type BarRow } from '@/components/kit'
+import { BarRows, Empty, Failed, Kpi, Loading, Panel, Pill, ScreenHeader, type BarRow } from '@/components/kit'
 import { useEcosystemDashboard } from '@/features/dashboard/use-dashboard'
 import { usePlants } from '@/features/plants/use-plants'
 import { formatDateTime } from '@/lib/format'
@@ -17,7 +18,7 @@ export function DashboardPage() {
   const dbDown = d?.health.database === 'down'
 
   return (
-    <>
+    <div className="studio-dashboard admin-dashboard">
       <ScreenHeader title="Resumen del ecosistema" description="Plantas, usuarios, accesos, catálogos y salud del sistema." />
 
       {dash.isError ? (
@@ -26,7 +27,14 @@ export function DashboardPage() {
         </Panel>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          <CommandDeck eyebrow="Visión del ecosistema" title="Todo conectado. Cada decisión cuenta." description="Un punto de partida para supervisar tus plantas, organizar el conocimiento y resolver los accesos que necesitan tu atención."
+            metric={<><RadialMetric value={active} total={d?.plants.total ?? 0} label="Plantas activas" loading={dash.isLoading} /><span className="radial-caption">Plantas activas</span></>}
+            actions={[
+              { to: '/plants', title: 'Tus plantas', description: 'Configura y supervisa el ecosistema', icon: Factory },
+              { to: '/access-requests', title: 'Accesos pendientes', description: d ? `${d.access.pendingRequests} solicitudes por revisar` : 'Consultar solicitudes', icon: ShieldCheck },
+              { to: '/catalog', title: 'Catálogo maestro', description: 'Activos, modelos y conocimiento', icon: BookOpen },
+            ]} />
+          <div className="metrics-bento">
             <Kpi label="Plantas" value={d?.plants.total ?? '—'} icon={Factory} to="/plants" tone="default" hint={d ? `${active} activas` : undefined} />
             <Kpi label="Usuarios" value={d?.users.total ?? '—'} icon={Users} hint={d ? `${d.users.activeLast30Days} con sesión en 30 días · ${d.users.globalAdmins} admin.` : undefined} />
             <Kpi label="Roles y permisos" value={d?.access.roles ?? '—'} icon={ShieldCheck} hint={d ? `${d.access.permissions} permisos · ${d.access.assignments} asignaciones` : undefined} />
@@ -35,7 +43,7 @@ export function DashboardPage() {
             <Kpi label="Actividad 24 h" value={d?.audit.last24Hours ?? '—'} icon={ScrollText} to="/activity" hint={d ? `${d.audit.last7Days} en 7 días` : undefined} />
           </div>
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <div className="analytics-bento">
             <Panel title="Plantas por estado">{dash.isLoading ? <Loading rows={3} /> : <BarRows rows={statusRows} empty="No hay plantas" />}</Panel>
             <Panel title="Plantas por visibilidad">{dash.isLoading ? <Loading rows={3} /> : <BarRows rows={visibilityRows} empty="No hay plantas" />}</Panel>
             <Panel title="Estado del sistema" subtitle={d ? `Actualizado ${formatDateTime(d.generatedAt)}` : undefined}>
@@ -91,14 +99,14 @@ export function DashboardPage() {
             </Panel>
           )}
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-5">
+          <div className="activity-bento">
             <Panel title="Plantas" className="lg:col-span-2" flush action={<Link to="/plants" className="inline-flex items-center gap-1 text-xs font-semibold text-fur-navy-900 hover:underline">Administrar <ArrowRight className="size-3.5" /></Link>}>
               {plants.isLoading ? (
                 <div className="p-4"><Loading rows={4} /></div>
               ) : plants.isError ? (
                 <Failed what="las plantas" onRetry={() => void plants.refetch()} />
               ) : plants.data && plants.data.length > 0 ? (
-                <ul className="divide-y divide-border">
+                <ul className="facility-grid">
                   {plants.data.map((p) => {
                     const st = statusMeta(p.status)
                     return (
@@ -121,17 +129,15 @@ export function DashboardPage() {
               {dash.isLoading ? (
                 <div className="p-4"><Loading rows={4} /></div>
               ) : d && d.audit.recent.length > 0 ? (
-                <DataTable head={['Fecha', 'Módulo', 'Acción', 'Entidad', 'Usuario']}>
-                  {d.audit.recent.slice(0, 6).map((e) => (
-                    <tr key={e.id}>
-                      <td className={`${td} whitespace-nowrap`}>{formatDateTime(e.occurredAt)}</td>
-                      <td className={td}>{moduleLabel(e.module)}</td>
-                      <td className={td}>{actionLabel(e.action)}</td>
-                      <td className={`${td} fur-code text-xs`}>{e.entityType}</td>
-                      <td className={td}>{e.actor ?? <span className="text-muted-foreground">Sistema</span>}</td>
-                    </tr>
+                <ol className="audit-timeline" aria-label="Eventos recientes">
+                  {d.audit.recent.slice(0, 6).map((event) => (
+                    <li key={event.id}>
+                      <span className="audit-timeline-icon"><Activity aria-hidden /></span>
+                      <div><span className="audit-event-module">{moduleLabel(event.module)}</span><h3>{actionLabel(event.action)} <span>{event.entityType}</span></h3><p>{event.actor ?? 'Sistema'}</p></div>
+                      <time dateTime={event.occurredAt}>{formatDateTime(event.occurredAt)}</time>
+                    </li>
                   ))}
-                </DataTable>
+                </ol>
               ) : (
                 <Empty>Sin actividad reciente.</Empty>
               )}
@@ -139,6 +145,6 @@ export function DashboardPage() {
           </div>
         </>
       )}
-    </>
+    </div>
   )
 }

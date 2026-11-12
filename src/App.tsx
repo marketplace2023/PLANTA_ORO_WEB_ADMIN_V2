@@ -1,3 +1,5 @@
+import { CommerceCasesPage } from '@/pages/commerce-cases-page'
+import { ProfessionalCasesPage } from '@/pages/professional-cases-page'
 import { LogOut, ShieldAlert } from 'lucide-react'
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { Loading, Panel } from '@/components/kit'
@@ -59,6 +61,8 @@ export default function App() {
         <Route path="organizations" element={<OrganizationsPage />} />
         <Route path="catalog" element={<CatalogPage />} />
         <Route path="masters" element={<MastersPage />} />
+        <Route path="commerce-cases" element={<CommerceCasesPage />} />
+        <Route path="professional-cases" element={<ProfessionalCasesPage />} />
         <Route path="activity" element={<ActivityPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

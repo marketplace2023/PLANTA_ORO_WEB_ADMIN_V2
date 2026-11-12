@@ -1,9 +1,16 @@
 @import "tailwindcss";
+@import "./styles/professional.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/jetbrains-mono";
 @import "./styles/tokens.css";
+@import "./styles/rebranding.css";
+@import "./styles/studio.css";
+
+@import "./styles/dark-mode.css";
+@import "./styles/asset-requests.css";
+@import "./styles/dark-studio.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -107,7 +114,7 @@
   --container-fur: 1440px;
 }
 
-/* Tema claro FUR (el design.md no define modo oscuro). */
+/* Default FUR theme; dark mode overrides live in styles/dark-mode.css. */
 :root {
   --background: var(--fur-gray-50);
   --foreground: var(--fur-gray-900);

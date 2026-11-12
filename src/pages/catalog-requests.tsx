@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ClipboardCheck, Eye, Search, X } from 'lucide-react'
 import { api } from '@/lib/api'
 import { formatDateTime } from '@/lib/format'
+import { MagicSurface } from '@/components/ui/studio'
 import { useFamilies } from '@/features/catalog/use-catalog'
 import { CatalogRequestSheet, type CatalogSubmission } from '@/components/catalog-request-sheet'
 import { CatalogRequestProcessDialog } from '@/components/catalog-request-process-dialog'
@@ -21,8 +22,7 @@ const PAGE_SIZE = 20
 
 function Status({ status }: { status: string }) {
   const label = status === 'APPROVED' ? 'Aprobada' : status === 'REJECTED' ? 'Rechazada' : 'Pendiente'
-  const color = status === 'APPROVED' ? 'border-green-200 bg-green-50 text-green-800' : status === 'REJECTED' ? 'border-red-200 bg-red-50 text-red-800' : 'border-amber-200 bg-amber-50 text-amber-900'
-  return <span className={`inline-flex rounded-md border px-2 py-1 text-xs font-semibold ${color}`}>{label}</span>
+  return <span className="fur-request-status" data-status={status}>{label}</span>
 }
 
 export function CatalogRequestsTab() {
@@ -47,7 +47,7 @@ export function CatalogRequestsTab() {
   if (query.isError) return <Failed what="las solicitudes de catálogo" onRetry={() => void query.refetch()} />
   return <section className="min-w-0 space-y-5" aria-label="Bandeja de solicitudes">
     <header className="space-y-1"><h2 className="text-xl font-semibold tracking-tight text-fur-navy-900">Solicitudes de plantas</h2><p className="text-sm text-muted-foreground">Consulta las fichas recibidas y procesa las incorporaciones pendientes.</p></header>
-    <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card">
+    <MagicSurface className="request-inbox min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b p-4">
         <Segmented label="Filtrar solicitudes por estado" value={status} onChange={value => { setStatus(value); setPage(1) }} options={FILTERS.map(f => ({ ...f, count: f.value === 'ALL' ? rows.length : rows.filter(r => r.status === f.value).length }))} />
         <div className="relative w-full sm:w-72"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" /><Input aria-label="Buscar solicitudes" className="pl-9" placeholder="Equipo, planta o familia…" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} /></div>
@@ -76,9 +76,9 @@ export function CatalogRequestsTab() {
         <span role="status">{filtered.length} {filtered.length === 1 ? 'solicitud' : 'solicitudes'}{search && ' encontradas'}</span>
         {pages > 1 && <div className="flex items-center gap-3"><Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Anterior</Button><span>Página {currentPage} de {pages}</span><Button variant="outline" size="sm" disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>Siguiente</Button></div>}
       </footer>
-    </div>
+    </MagicSurface>
     {selected && selection?.mode === 'view' && <Dialog open onOpenChange={open => !open && setSelection(null)}>
-      <DialogContent showCloseButton={false} className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+      <DialogContent showCloseButton={false} className="fur-asset-dialog flex max-h-[92dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
         <header className="flex shrink-0 items-start justify-between gap-4 border-b p-5"><div className="space-y-1"><DialogTitle className="text-lg font-semibold">Ficha de solicitud</DialogTitle><DialogDescription>Información original enviada por la planta.</DialogDescription></div><Button variant="ghost" size="icon-sm" aria-label="Cerrar ficha" onClick={() => setSelection(null)}><X /></Button></header>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5"><CatalogRequestSheet request={selected} family={family} /></div>
       </DialogContent>

@@ -1,0 +1,28 @@
+.dark :is(.studio-shell, .panel-main, .login-shell) { background: var(--background); }
+.dark .panel-topbar { background: #0d1727e8; color: var(--foreground); }
+.dark .panel-sidebar, .dark .magic-surface:not(.command-feature), .dark .command-action { background: var(--card); border-color: var(--border); }
+.dark .desktop-sidebar { border-color: var(--border); }
+.dark .panel-topbar [aria-label='Actualizar datos'] { background: var(--card); border-color: var(--border); }
+.dark .sidebar-context > div, .dark .sidebar-context button { background: var(--muted); }
+.dark .panel-sidebar nav a[aria-current=page] { background: #304764; color: white; }
+.dark :is(.brand-logo, .screen-banner, .screen-banner-title, .studio-metric-value,
+  .command-action strong, .audit-timeline h3, .screen-banner-actions [data-slot=button][data-variant=ghost]) { color: var(--foreground); }
+.dark .sidebar-brand .brand-logo img, .dark .login-mobile-brand .brand-logo img,
+.dark .panel-footer img, .dark .topbar-brand-mark { filter: brightness(0) invert(1); }
+.dark .sidebar-brand > p, .dark .screen-banner-description, .dark .studio-metric-label,
+.dark .studio-metric-bottom p, .dark .command-action small, .dark .panel-surface > header p,
+.dark .login-content label, .dark .audit-event-module, .dark .audit-timeline p,
+.dark .audit-timeline time { color: var(--muted-foreground); }
+.dark .command-action-icon, .dark .audit-timeline-icon, .dark .facility-grid a > span:first-child { background: var(--muted); color: #a8cfff; border-color: var(--border); }
+.dark .studio-metric-icon { background: color-mix(in srgb, var(--metric-tone) 16%, var(--card)); color: color-mix(in srgb, var(--metric-tone) 50%, #c5ddff); }
+.dark .facility-grid a { border-color: var(--border); }
+.dark .facility-grid a:hover { background: var(--accent); border-color: #a88c38; }
+.dark .audit-timeline li:not(:last-child)::after { background: var(--border); }
+.dark .conveyor-node, .dark .master-network-card, .dark .plant-network-card { background: var(--card); border-color: var(--border); }
+.dark .conveyor-node > .fur-code { background: #544622; color: #ffe777; }
+.dark .network-mark { background: color-mix(in srgb, var(--network-color) 16%, var(--card)); border-color: var(--border); }
+.dark .fur-panel thead { background: var(--muted); color: var(--foreground); }
+.dark .fur-panel tbody tr:hover { background: var(--accent); }
+.dark .screen-banner-actions [data-slot=button][data-variant=outline],
+.dark .screen-banner-actions [data-slot=button][data-variant=secondary] { background: var(--card); border-color: var(--border); }
+.dark .login-content input { background: var(--card); border-color: var(--input); }

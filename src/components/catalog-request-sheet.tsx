@@ -49,12 +49,12 @@ export function CatalogRequestSheet({ request, family }: { request: CatalogSubmi
   const stage = stages.data?.find(s => s.code === draft.stageCode)
   const specifications = Object.entries(draft.specifications ?? {})
   const components = draft.components ?? []
-  const badge = request.status === 'APPROVED' ? 'border-green-200 bg-green-50 text-green-800' : request.status === 'REJECTED' ? 'border-red-200 bg-red-50 text-red-800' : 'border-amber-200 bg-amber-50 text-amber-900'
-  return <section aria-label="Ficha de la solicitud" className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+
+  return <section aria-label="Ficha de la solicitud" className="request-sheet min-w-0 overflow-hidden border border-border bg-card">
     <header className="space-y-5 border-b border-border bg-muted/30 p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><ClipboardList className="size-4" aria-hidden="true" />Ficha de la solicitud</span>
-        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${badge}`}>{decisions[request.status] ?? request.status}</span>
+        <span className="fur-request-status" data-status={request.status}>{decisions[request.status] ?? request.status}</span>
       </div>
       <h2 className="text-2xl leading-tight font-semibold tracking-tight text-fur-navy-900 [overflow-wrap:anywhere]">{draft.name}</h2>
       <Fields rows={[

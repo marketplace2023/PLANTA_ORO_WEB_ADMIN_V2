@@ -47,7 +47,7 @@ export function CatalogRequestProcessDialog({ request, family, onClose }: { requ
   }, onError: e => setError(e instanceof ApiError ? errorMessage(e) : e instanceof Error ? e.message : 'No se pudo completar la acción') })
 
   return <Dialog open onOpenChange={open => !open && !action.isPending && onClose()}>
-    <DialogContent showCloseButton={false} className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+    <DialogContent showCloseButton={false} className="fur-asset-dialog flex max-h-[92dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
       <header className="flex shrink-0 items-start justify-between gap-4 border-b p-5 sm:px-6">
         <div className="min-w-0 space-y-2"><DialogTitle className="text-xl font-semibold">Procesar solicitud</DialogTitle><DialogDescription className="[overflow-wrap:anywhere]">{request.draft.name}</DialogDescription></div>
         <Button variant="ghost" size="icon-sm" disabled={action.isPending} aria-label="Cerrar procesamiento" onClick={onClose}><X /></Button>
