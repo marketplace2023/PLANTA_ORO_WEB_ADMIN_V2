@@ -1,4 +1,7 @@
-import { FileSpreadsheet, ImageIcon, ImagePlus, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { CatalogRequestsTab } from './catalog-requests'
+import { SpecificationsTab } from './catalog-specifications'
+import { FamilySpecificationFields } from '@/components/family-specification-fields'
+import { Eye, FileSpreadsheet, ImageIcon, ImagePlus, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { CheckGroup } from '@/components/check-group'
@@ -7,6 +10,7 @@ import { FormDialog, type Field, type Values } from '@/components/form-dialog'
 import { errorMessage, selectClass } from '@/lib/forms'
 import { DataTable, Empty, Failed, Loading, Panel, Pill, ScreenHeader, Segmented, td } from '@/components/kit'
 import { ModelImagePicker, type ImageChange } from '@/components/model-image-picker'
+import { ModelFichaDialog } from '@/components/model-ficha-dialog'
 import { ModelVariablesDialog, VariablesTab } from '@/pages/catalog-variables'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,7 +44,7 @@ import { CatalogImportDialog } from '@/pages/catalog-import-dialog'
 import { CatalogDeleteDialog } from '@/pages/catalog-delete-dialog'
 import { CatalogImagesDialog } from '@/pages/catalog-images-dialog'
 
-type Tab = 'families' | 'types' | 'manufacturers' | 'models' | 'variables'
+type Tab = 'requests' | 'specifications' | 'families' | 'types' | 'manufacturers' | 'models' | 'variables'
 
 const opt = (v: string | boolean) => (String(v).trim() === '' ? undefined : String(v).trim())
 const nul = (v: string | boolean) => (String(v).trim() === '' ? null : String(v).trim())
@@ -65,24 +69,26 @@ function FamiliesTab() {
   const editing = form?.row
   const m = editing ? update : create
   const fields: Field[] = [
-    { name: 'code', label: 'Código', required: true, disabled: !!editing, placeholder: 'ROTATING', hint: 'Mayúsculas, números y guion bajo. No se puede cambiar.' },
+    { name: 'tagCode', label: 'Código TAG', required: true, placeholder: 'MOT', hint: 'Único. De 3 a 12 letras o números, empezando por una letra. Cambiarlo solo afecta a futuras altas de activos.' },
+    { name: 'code', label: 'Código de integración', required: true, disabled: !!editing, placeholder: 'ROTATING', hint: 'Mayúsculas, números y guion bajo. No se puede cambiar.' },
     { name: 'name', label: 'Nombre', required: true },
     { name: 'icon', label: 'Icono', placeholder: 'cog', hint: 'Nombre corto del icono (opcional).' },
     { name: 'description', label: 'Descripción', type: 'textarea' },
   ]
   const submit = (v: Values) => {
     const done = { onSuccess: () => { toast.success(editing ? 'Familia actualizada' : 'Familia creada'); setForm(null) } }
-    if (editing) update.mutate({ id: editing.id, name: String(v.name).trim(), icon: nul(v.icon), description: nul(v.description) }, done)
-    else create.mutate({ code: upper(v.code), name: String(v.name).trim(), icon: opt(v.icon), description: opt(v.description) }, done)
+    if (editing) update.mutate({ id: editing.id, tagCode: upper(v.tagCode), name: String(v.name).trim(), icon: nul(v.icon), description: nul(v.description) }, done)
+    else create.mutate({ code: upper(v.code), tagCode: upper(v.tagCode), name: String(v.name).trim(), icon: opt(v.icon), description: opt(v.description) }, done)
   }
   return (
     <>
       <Section title="Familias de activos" subtitle="Agrupan los tipos (rotativos, eléctricos, instrumentación…)." addLabel="Nueva familia" onAdd={() => { create.reset(); update.reset(); setForm({}) }}>
         {q.isLoading ? <div className="p-4"><Loading rows={5} /></div> : q.isError ? <Failed what="las familias" onRetry={() => void q.refetch()} /> : q.data && q.data.length > 0 ? (
-          <DataTable head={['Código', 'Nombre', 'Icono', { label: '', right: true }]}>
+          <DataTable head={['Código TAG', 'Código de integración', 'Nombre', 'Icono', { label: '', right: true }]}>
             {q.data.map((f) => (
               <tr key={f.id}>
-                <td className={`${td} fur-code text-xs`}>{f.code}</td>
+                <td className={`${td} fur-code font-semibold text-fur-navy-900`}>{f.tagCode ?? '—'}</td>
+                <td className={`${td} fur-code text-xs text-muted-foreground`}>{f.code}</td>
                 <td className={`${td} font-medium text-fur-navy-900`}>{f.name}</td>
                 <td className={td}>{f.icon ?? '—'}</td>
                 <td className={`${td} text-right`}>
@@ -106,7 +112,7 @@ function FamiliesTab() {
           onClose={() => setRemoving(null)}
         />
       )}
-      {form && <FormDialog title={editing ? `Editar familia ${editing.code}` : 'Nueva familia'} fields={fields} initial={editing ? { code: editing.code, name: editing.name, icon: editing.icon ?? '' } : {}} busy={m.isPending} error={errorMessage(m.error)} onClose={() => setForm(null)} onSubmit={submit} />}
+      {form && <FormDialog title={editing ? `Editar familia ${editing.code}` : 'Nueva familia'} fields={fields} initial={editing ? { code: editing.code, tagCode: editing.tagCode ?? '', name: editing.name, icon: editing.icon ?? '', description: editing.description ?? '' } : {}} busy={m.isPending} error={errorMessage(m.error)} onClose={() => setForm(null)} onSubmit={submit} />}
     </>
   )
 }
@@ -221,10 +227,13 @@ function ModelsTab() {
   const q = useModels({ search: useDebouncedValue(search.trim()) || undefined, family: family || undefined, status, page })
   const [form, setForm] = useState<{ row?: Model } | null>(null)
   const [variablesOf, setVariablesOf] = useState<Model | null>(null)
+  const [previewOf, setPreviewOf] = useState<Model | null>(null)
   const stageMasters = useStageMasters()
   const networkMasters = useNetworkMasters()
   const [networkCodes, setNetworkCodes] = useState<string[]>([])
   const [references, setReferences] = useState<ReferenceManufacturer[]>([])
+  const [specDraft, setSpecDraft] = useState<{ typeCode: string; values: Record<string, unknown> } | null>(null)
+  const specificationsFor = (typeCode: string) => specDraft?.typeCode === typeCode ? specDraft.values : editing?.type.code === typeCode ? editing.specifications : {}
   /** Etapas elegidas para el modelo, con el tipo al que corresponden (al cambiar de tipo se vuelve a empezar). */
   const [stageSel, setStageSel] = useState<{ typeCode: string; codes: string[] } | null>(null)
   const editing = form?.row
@@ -251,9 +260,9 @@ function ModelsTab() {
     try {
       let id = editing?.id
       if (editing) {
-        await update.mutateAsync({ id: editing.id, modelName: String(v.modelName).trim(), technicalData: { ...editing.technicalData, fabricantesReferencia: references }, status: v.status as 'ACTIVE' | 'INACTIVE', stageCodes: stagesFor(editing.type.code).selected, networkCodes })
+        await update.mutateAsync({ id: editing.id, specifications: specificationsFor(editing.type.code), modelName: String(v.modelName).trim(), technicalData: { ...editing.technicalData, fabricantesReferencia: references }, status: v.status as 'ACTIVE' | 'INACTIVE', stageCodes: stagesFor(editing.type.code).selected, networkCodes })
       } else {
-        id = (await create.mutateAsync({ typeCode: String(v.typeCode), modelName: String(v.modelName).trim(), technicalData: { fabricantesReferencia: references }, stageCodes: stagesFor(String(v.typeCode)).selected, networkCodes })).id
+        id = (await create.mutateAsync({ typeCode: String(v.typeCode), specifications: specificationsFor(String(v.typeCode)), modelName: String(v.modelName).trim(), technicalData: { fabricantesReferencia: references }, stageCodes: stagesFor(String(v.typeCode)).selected, networkCodes })).id
       }
       try {
         if (id && image.file) await uploadImage.mutateAsync({ id, file: image.file })
@@ -290,7 +299,7 @@ function ModelsTab() {
           <option value="INACTIVE">Inactivos</option>
         </select>
       </div>
-      <Section title="Modelos" subtitle="Describen qué existe; los activos de cada planta se crean a partir de un modelo." addLabel="Nuevo modelo" onAdd={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel(null); setNetworkCodes([]); setReferences([]); setForm({}) }}>
+      <Section title="Modelos" subtitle="Modelos de referencia con especificaciones definidas por su familia." addLabel="Nuevo modelo" onAdd={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel(null); setNetworkCodes([]); setReferences([]); setSpecDraft(null); setForm({}) }}>
         {q.isLoading ? <div className="p-4"><Loading rows={6} /></div> : q.isError ? <Failed what="los modelos" onRetry={() => void q.refetch()} /> : q.data && q.data.items.length > 0 ? (
           <>
             <DataTable head={['Foto', 'TAG / Modelo', 'Tipo', 'Etapas', 'Redes', 'Familia', 'Fabricantes de referencia', 'Estado', { label: '', right: true }]}>
@@ -301,7 +310,7 @@ function ModelsTab() {
                       {r.imageUrl ? <img src={apiUrl(r.imageUrl)} alt={`Foto de ${r.modelName}`} loading="lazy" className="size-full object-contain" /> : <ImageIcon className="size-5 text-fur-gray-500" aria-label="Sin foto" />}
                     </span>
                   </td>
-                  <td className={`${td} font-medium text-fur-navy-900`}>{r.catalogTag && <div className="fur-code mb-1 text-xs text-muted-foreground">{r.catalogTag}</div>}{r.modelName}</td>
+                  <td className={`${td} font-medium text-fur-navy-900`}>{r.catalogTag && <div className="fur-code mb-1 text-xs text-muted-foreground">{r.catalogTag}</div>}{r.modelName}<div className="mt-2"><Button size="xs" variant="outline" aria-label={`Ver ficha de ${r.modelName}`} onClick={() => setPreviewOf(r)}><Eye /> Ver ficha</Button></div></td>
                   <td className={td}>{r.type.name}</td>
                   <td className={td}>
                     {r.stageCodes.length === 0 ? (
@@ -320,7 +329,7 @@ function ModelsTab() {
                   <td className={`${td} text-right`}>
                     <div className="flex justify-end gap-1.5">
                       <Button size="xs" variant="outline" aria-label={`Datos del fabricante de ${r.modelName}`} onClick={() => setVariablesOf(r)}><ListChecks /> Datos del fabricante</Button>
-                      <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel({ typeCode: r.type.code, codes: r.stageCodes }); setNetworkCodes(r.networkCodes); setReferences(r.referenceManufacturers ?? []); setForm({ row: r }) }}><Pencil /> Editar</Button>
+                      <Button size="xs" variant="secondary" aria-label={`Editar ${r.modelName}`} onClick={() => { setImage({ file: null, remove: false }); setSaveError(null); setStageSel({ typeCode: r.type.code, codes: r.stageCodes }); setNetworkCodes(r.networkCodes); setReferences(r.referenceManufacturers ?? []); setSpecDraft(null); setForm({ row: r }) }}><Pencil /> Editar</Button>
                       <Button size="xs" variant="outline" aria-label={`Eliminar ${r.modelName}`} onClick={() => { del.reset(); setRemoving(r) }}><Trash2 /> Eliminar</Button>
                     </div>
                   </td>
@@ -338,6 +347,7 @@ function ModelsTab() {
         ) : <Empty>No hay modelos con estos filtros.</Empty>}
       </Section>
       {variablesOf && <ModelVariablesDialog model={variablesOf} onClose={() => setVariablesOf(null)} />}
+      {previewOf && <ModelFichaDialog model={previewOf} typeDescription={types.data?.find(t => t.id === previewOf.type.id)?.description} stages={stageMasters.data ?? []} networks={networkMasters.data ?? []} onClose={() => setPreviewOf(null)} />}
       {removing && (
         <ConfirmDeleteDialog
           title={`Eliminar el modelo ${removing.modelName}`}
@@ -373,6 +383,7 @@ function ModelsTab() {
                     <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">El tipo aún no tiene etapas posibles. Agrégalas en la pestaña «Tipos» para poder elegir en cuáles participa este modelo.</p>
                   ))}
                 <CheckGroup legend="Redes transversales" options={(networkMasters.data ?? []).map(n => ({ value: n.code, label: n.name }))} value={networkCodes} onChange={setNetworkCodes} help="Estas redes corresponden solo a este modelo. Sin seleccionar ninguna, el modelo queda sin redes asignadas." />
+                <fieldset className="space-y-3 border-t border-border pt-4"><legend className="font-semibold">Especificaciones técnicas</legend><FamilySpecificationFields key={typeCode} familyId={families.data?.find(f => f.code === types.data?.find(t => t.code === typeCode)?.familyCode)?.id ?? ''} value={specificationsFor(typeCode)} onChange={values => setSpecDraft({ typeCode, values })} /></fieldset>
                 <ReferenceManufacturersFields value={references} onChange={setReferences} />
                 <ModelImagePicker currentUrl={editing?.imageUrl ?? null} value={image} onChange={setImage} />
               </>
@@ -393,7 +404,7 @@ export function CatalogPage() {
   const [uploadingImages, setUploadingImages] = useState(false)
   return (
     <>
-      <ScreenHeader title="Catálogo de activos" description="Catálogo maestro global: describe qué existe, no qué posee cada planta. Los códigos son inmutables."
+      <ScreenHeader title="Catálogo de activos" description="Catálogo maestro global: describe qué existe, no qué posee cada planta. Los códigos de integración se conservan."
         actions={<><Button variant="outline" onClick={() => setUploadingImages(true)}><ImagePlus /> Cargar imágenes</Button><Button variant="outline" onClick={() => setImporting(true)}><FileSpreadsheet /> Importar Excel</Button><Button variant="outline" onClick={() => setDeleting(true)}><Trash2 /> Eliminar por Excel</Button></>} />
       {uploadingImages && <CatalogImagesDialog onClose={() => setUploadingImages(false)} />}
       {importing && <CatalogImportDialog onClose={() => setImporting(false)} onImported={() => setTab('models')} />}
@@ -404,18 +415,22 @@ export function CatalogPage() {
         onChange={setTab}
         options={[
           { value: 'models', label: 'Modelos' },
+          { value: 'requests', label: 'Solicitudes de plantas' },
           { value: 'types', label: 'Tipos' },
           { value: 'families', label: 'Familias' },
           { value: 'manufacturers', label: 'Fabricantes' },
           { value: 'variables', label: 'Variables' },
+          { value: 'specifications', label: 'Especificaciones' },
         ]}
       />
       <div className="mt-3">
         {tab === 'models' && <ModelsTab />}
+        {tab === 'requests' && <CatalogRequestsTab />}
         {tab === 'types' && <TypesTab />}
         {tab === 'families' && <FamiliesTab />}
         {tab === 'manufacturers' && <ManufacturersTab />}
         {tab === 'variables' && <VariablesTab />}
+        {tab === 'specifications' && <SpecificationsTab />}
       </div>
     </>
   )

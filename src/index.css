@@ -9,6 +9,7 @@
 @import "./styles/studio.css";
 
 @import "./styles/dark-mode.css";
+@import "./styles/asset-requests.css";
 @import "./styles/dark-studio.css";
 
 @custom-variant dark (&:is(.dark *));

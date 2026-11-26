@@ -25,7 +25,7 @@ export type NetworkMaster = {
   /** Ruta (relativa a la API) de la imagen de la red; usar con `apiUrl`. null = sin imagen. */
   layoutImageUrl: string | null
 }
-export type Family = { id: string; code: string; name: string; icon: string | null }
+export type Family = { id: string; code: string; tagCode: string; name: string; icon: string | null; description?: string | null }
 export type AssetType = { id: string; code: string; name: string; description: string | null; familyCode: string; familyName: string; stageCodes: string[] }
 export type Manufacturer = { id: string; name: string; countryCode: string | null }
 export type Model = {
@@ -71,7 +71,7 @@ export type CatalogImportPreview = {
   networks: Array<{ code: string; name: string }>
   issues: Array<{ sheet: string; row: number; message: string; code?: 'MISSING_SPECIFICATIONS' | 'TAG_ALREADY_EXISTS' | 'DUPLICATE_MODEL_IDENTITY' }>
   summary: { models: ImportCounts; families: ImportCounts; types: ImportCounts; manufacturers: ImportCounts & { merged: number }; specifications: number }
-  rows: Array<{ tag: string; name: string; family: string; type: string; manufacturer: string; stages: string[]; components: string[]; referenceManufacturers?: Array<{ nombre: string; alcance: string | null; sitioWeb: string | null }> | null; specifications: Record<string, string>; action: 'create' | 'update' }>
+  rows: Array<{ tag: string; name: string; family: string; type: string; manufacturer: string; stages: string[]; components: string[]; referenceManufacturers?: Array<{ nombre: string; alcance: string | null; sitioWeb: string | null }> | null; specifications: Record<string, unknown>; action: 'create' | 'update' }>
 }
 type ImportCounts = { create: number; update: number }
 export type CatalogImportResult = CatalogImportPreview & { imported: number }
@@ -120,14 +120,14 @@ function useCatalogMutation<V, T = unknown>(fn: (v: V) => Promise<T>) {
 }
 const send = <T = unknown>(method: 'POST' | 'PATCH', path: string, body: unknown) => api<T>(path, { method, ...jsonBody(body) })
 
-export const useCreateFamily = () => useCatalogMutation((v: { code: string; name: string; description?: string; icon?: string }) => send('POST', '/catalog/families', v))
-export const useUpdateFamily = () => useCatalogMutation(({ id, ...v }: { id: string; name?: string; description?: string | null; icon?: string | null }) => send('PATCH', `/catalog/families/${id}`, v))
+export const useCreateFamily = () => useCatalogMutation((v: { code: string; tagCode: string; name: string; description?: string; icon?: string }) => send('POST', '/catalog/families', v))
+export const useUpdateFamily = () => useCatalogMutation(({ id, ...v }: { id: string; tagCode?: string; name?: string; description?: string | null; icon?: string | null }) => send('PATCH', `/catalog/families/${id}`, v))
 export const useCreateType = () => useCatalogMutation((v: { familyCode: string; code: string; name: string; description?: string; stageCodes?: string[] }) => send('POST', '/catalog/types', v))
 export const useUpdateType = () => useCatalogMutation(({ id, ...v }: { id: string; name?: string; familyCode?: string; description?: string | null; stageCodes?: string[] }) => send('PATCH', `/catalog/types/${id}`, v))
 export const useCreateManufacturer = () => useCatalogMutation((v: { name: string; countryCode?: string; website?: string }) => send('POST', '/catalog/manufacturers', v))
 export const useUpdateManufacturer = () => useCatalogMutation(({ id, ...v }: { id: string; name?: string; countryCode?: string | null; website?: string | null }) => send('PATCH', `/catalog/manufacturers/${id}`, v))
-export const useCreateModel = () => useCatalogMutation((v: { typeCode: string; modelName: string; technicalData?: Record<string, unknown>; stageCodes?: string[]; networkCodes?: string[] }) => send<{ id: string }>('POST', '/catalog/models', v))
-export const useUpdateModel = () => useCatalogMutation(({ id, ...v }: { id: string; modelName?: string; status?: 'ACTIVE' | 'INACTIVE'; technicalData?: Record<string, unknown>; stageCodes?: string[]; networkCodes?: string[] }) => send('PATCH', `/catalog/models/${id}`, v))
+export const useCreateModel = () => useCatalogMutation((v: { typeCode: string; modelName: string; specifications?: Record<string, unknown>; technicalData?: Record<string, unknown>; stageCodes?: string[]; networkCodes?: string[] }) => send<{ id: string }>('POST', '/catalog/models', v))
+export const useUpdateModel = () => useCatalogMutation(({ id, ...v }: { id: string; modelName?: string; specifications?: Record<string, unknown>; status?: 'ACTIVE' | 'INACTIVE'; technicalData?: Record<string, unknown>; stageCodes?: string[]; networkCodes?: string[] }) => send('PATCH', `/catalog/models/${id}`, v))
 
 /** Eliminar del catálogo: la API lo rechaza (409) con el motivo si algo lo usa (activos, modelos, tipos…). */
 const remove = (kind: 'families' | 'types' | 'manufacturers' | 'models') => (id: string) => api<void>(`/catalog/${kind}/${id}`, { method: 'DELETE' })
